@@ -1,0 +1,3 @@
+[submodule "MIMIC-III_ICU_Readmission_Analysis"]
+	path = MIMIC-III_ICU_Readmission_Analysis
+	url = git@github.com:JuhongPark/MIMIC-III_ICU_Readmission_Analysis.git
