@@ -1,10 +1,7 @@
 import os
 from gensim.models import KeyedVectors
 
-BIOWORDVEC_PATH = os.environ.get(
-    "BIOWORDVEC_PATH",
-    "/home/mimic/Downloads/BioWordVec/BioWordVec_PubMed_MIMICIII_d200.vec.bin",
-)
+BIOWORDVEC_PATH = os.environ.get("BIOWORDVEC_PATH", "")
 
 
 def load_biowordvec(path=None):
