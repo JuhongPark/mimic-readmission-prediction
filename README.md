@@ -31,15 +31,15 @@
 ## Architecture
 
 ```
-Timeseries  ──┐
-Diagnoses   ──┤ Concat       LSTM-CNN         Sigmoid
-Demographics ─┤ per      →   (depth=2,   →    P(readmit
-Discharge   ──┘ timestep      dim=16)          ≤ 30 days)
+[Timeseries   76d] ─┐
+[Diagnoses   300d] ──┼── Concat per timestep ── LSTM-CNN (depth=2, dim=16) ── P(readmit ≤ 30d)
+[Demographics 14d] ──┤
+[Discharge   200d] ──┘   (390-dim, or 590 with discharge notes)
 ```
 
 Time-invariant features (diagnoses, demographics) are broadcast across all 48 timesteps before concatenation.
 
-**Metrics:** AUROC | AUPRC | Accuracy | Precision | Recall
+**Evaluation:** AUROC | AUPRC | Accuracy | Precision | Recall
 
 ---
 
@@ -66,15 +66,14 @@ tests/           Unit tests for core utilities
 
 ```bash
 pip install -e /path/to/MIMIC-III_ICU_Readmission_Analysis
-pip install -e .
+pip install -e ".[dev]"
 export MIMIC_DATA_ROOT=/path/to/your/data
-```
 
-```bash
 python scripts/preprocess.py                              # 1. Preprocess
 python scripts/train_generator.py                         # 2. Train (defaults)
 python scripts/train_generator.py --epochs 100 --lr 5e-4  #    (custom)
 python scripts/train_generator_wordvec.py                 #    (+ discharge note vectors)
+pytest                                                    # 3. Run tests
 ```
 
 See [`data/README.md`](data/README.md) for expected data layout.
