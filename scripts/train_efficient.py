@@ -106,7 +106,7 @@ def main():
     )
     model.final_name = model.say_name() + suffix
     print("==> model.final_name:", model.final_name)
-    model.compile(optimizer=Adam(lr=0.001, beta_1=0.9), loss=hp['loss'], loss_weights=hp['loss_weights'])
+    model.compile(optimizer=Adam(learning_rate=0.001, beta_1=0.9), loss=hp['loss'], loss_weights=hp['loss_weights'])
     model.summary()
 
     # Prepare callbacks

@@ -63,7 +63,7 @@ def main():
     model.final_name = model.say_name()
     print("==> model.final_name:", model.final_name)
     model.compile(
-        optimizer=Adam(lr=0.001, beta_1=0.9),
+        optimizer=Adam(learning_rate=0.001, beta_1=0.9),
         loss=hp['loss'], metrics=['acc'], loss_weights=hp['loss_weights'],
     )
     model.summary()
@@ -77,11 +77,11 @@ def main():
         monitor='val_acc', save_weights_only=True, mode='max', period=1,
     )
 
-    hist = model.fit_generator(
-        verbose=1, epochs=hp['epochs'],
+    hist = model.fit(
+        train_generator, verbose=1, epochs=hp['epochs'],
         steps_per_epoch=train_generator.size() // hp['batch_size'],
         validation_steps=val_generator.size(),
-        generator=train_generator, validation_data=val_generator,
+        validation_data=val_generator,
         callbacks=[checkpoint],
     )
 
@@ -92,7 +92,7 @@ def main():
         normalizer=normalizer, discretizer=discretizer,
         embeddings=embeddings, word_indices=word_indices,
     )
-    predictions = model.predict_generator(test_generator, steps=test_generator.size())
+    predictions = model.predict(test_generator, steps=test_generator.size())
     test_labels = test_generator.data_list['y_true']
     test_names = test_generator.whole_names
 
