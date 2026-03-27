@@ -1,10 +1,15 @@
+from __future__ import annotations
 import numpy as np
+import pandas as pd
 
 
-def disease_embedding(embeddings, word_indices, diseases_list):
+def disease_embedding(
+    embeddings: np.ndarray, word_indices: dict[str, int], diseases_list: list[list[str]]
+) -> list[list[float]]:
+    emb_dim = embeddings.shape[1]
     emb_list = []
     for diseases in diseases_list:
-        emb_period = [0] * 300
+        emb_period = [0] * emb_dim
         skip = 0
         for disease in diseases:
             k = 'IDX_' + str(disease)
@@ -20,7 +25,7 @@ def disease_embedding(embeddings, word_indices, diseases_list):
     return emb_list
 
 
-def get_wordvectors(names, discharge_wv):
+def get_wordvectors(names: list[str], discharge_wv: pd.DataFrame) -> list:
     wordvector_list = []
     namelist = []
     for element in names:
@@ -35,7 +40,7 @@ def get_wordvectors(names, discharge_wv):
     return wordvector_list
 
 
-def age_normalize(demographic, age_means, age_std):
+def age_normalize(demographic: list[list[float]], age_means: float, age_std: float) -> list:
     demographic = np.asmatrix(demographic)
     demographic[:, 0] = (demographic[:, 0] - age_means) / age_std
     return demographic.tolist()

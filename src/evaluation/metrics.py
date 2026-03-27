@@ -1,9 +1,10 @@
+from __future__ import annotations
 import os
 import numpy as np
 from sklearn import metrics
 
 
-def print_metrics_binary(y_true, predictions, verbose=1):
+def print_metrics_binary(y_true: np.ndarray, predictions: np.ndarray, verbose: int = 1) -> dict[str, float]:
     predictions = np.array(predictions)
     if len(predictions.shape) == 1:
         predictions = np.stack([1 - predictions, predictions]).transpose((1, 0))
@@ -46,7 +47,7 @@ def print_metrics_binary(y_true, predictions, verbose=1):
     }
 
 
-def save_results(results, names, pred, y_true, path):
+def save_results(results: dict[str, float], names: list[str], pred: np.ndarray, y_true: np.ndarray, path: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         f.write("acc, prec0, prec1, rec0, rec1, auroc, auprc, minpse\n")

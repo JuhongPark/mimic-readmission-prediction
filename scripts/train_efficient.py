@@ -3,11 +3,9 @@ Train LSTM-CNN model for ICU readmission prediction.
 Efficient version: loads all data into memory at once.
 """
 import os
-import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 from keras.callbacks import ModelCheckpoint, CSVLogger
@@ -129,7 +127,7 @@ def main():
     model.fit(
         x=train_raw[0], y=train_raw[1],
         validation_data=val_raw,
-        nb_epoch=hp['epochs'],
+        epochs=hp['epochs'],
         callbacks=[metrics_callback, saver, csv_logger],
         shuffle=True, verbose=2, batch_size=2,
     )

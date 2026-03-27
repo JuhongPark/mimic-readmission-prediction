@@ -2,11 +2,10 @@
 Train LSTM-CNN model for ICU readmission prediction.
 Generator version: uses Keras Sequence for memory-efficient data loading.
 """
+import argparse
 import os
-import sys
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import keras
@@ -24,9 +23,27 @@ from src.discretizer import StandardDiscretizer
 from src.data.generator import Generator
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train LSTM-CNN for ICU readmission prediction",
+    )
+    parser.add_argument("--epochs", type=int, default=None, help="number of training epochs")
+    parser.add_argument("--batch-size", type=int, default=None, help="training batch size")
+    parser.add_argument("--lr", type=float, default=0.001, help="learning rate (default: 0.001)")
+    parser.add_argument("--dim", type=int, default=None, help="LSTM hidden dimension")
+    parser.add_argument("--dropout", type=float, default=None, help="dropout rate")
+    parser.add_argument("--output-dir", type=str, default=None, help="output directory")
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     hp = DEFAULT_HPARAMS.copy()
-    output_path = OUTPUT_DIR
+    for key in ['epochs', 'batch_size', 'dim', 'dropout']:
+        val = getattr(args, key, None)
+        if val is not None:
+            hp[key] = val
+    output_path = args.output_dir or OUTPUT_DIR
 
     # Load embeddings and normalizer
     normalizer = Normalizer(fields=CONT_CHANNELS)
@@ -62,7 +79,7 @@ def main():
     model.final_name = model.say_name()
     print("==> model.final_name:", model.final_name)
     model.compile(
-        optimizer=Adam(learning_rate=0.001, beta_1=0.9),
+        optimizer=Adam(learning_rate=args.lr, beta_1=0.9),
         loss=hp['loss'], metrics=['acc'], loss_weights=hp['loss_weights'],
     )
     model.summary()
