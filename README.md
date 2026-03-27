@@ -31,11 +31,10 @@
 ## Architecture
 
 ```
-  Timeseries ──┐
-  Diagnoses  ──┤  Concat     LSTM-CNN        Sigmoid
-  Demographics ┤  per     →  (depth=2,  →    P(readmit
-  Discharge  ──┘  timestep    dim=16)         ≤ 30 days)
-  notes
+Timeseries  ──┐
+Diagnoses   ──┤ Concat       LSTM-CNN         Sigmoid
+Demographics ─┤ per      →   (depth=2,   →    P(readmit
+Discharge   ──┘ timestep      dim=16)          ≤ 30 days)
 ```
 
 **Metrics:** AUROC | AUPRC | Accuracy | Precision | Recall

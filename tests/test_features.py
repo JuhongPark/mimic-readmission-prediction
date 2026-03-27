@@ -9,16 +9,15 @@ def test_disease_embedding_averages_found_codes():
     ])
     word_indices = {'IDX_001': 0, 'IDX_002': 1}
     result = disease_embedding(embeddings, word_indices, [['001', '002']])
-    expected = [2.5, 3.5, 4.5]
     assert len(result) == 1
-    assert np.allclose(result[0][:3], expected)
+    assert np.allclose(result[0], [2.5, 3.5, 4.5])
 
 
 def test_disease_embedding_skips_unknown_codes():
     embeddings = np.array([[1.0, 2.0, 3.0]])
     word_indices = {'IDX_001': 0}
     result = disease_embedding(embeddings, word_indices, [['001', '999']])
-    assert np.allclose(result[0][:3], [1.0, 2.0, 3.0])
+    assert np.allclose(result[0], [1.0, 2.0, 3.0])
 
 
 def test_disease_embedding_all_unknown():

@@ -127,7 +127,7 @@ def main():
     model.fit(
         x=train_raw[0], y=train_raw[1],
         validation_data=val_raw,
-        nb_epoch=hp['epochs'],
+        epochs=hp['epochs'],
         callbacks=[metrics_callback, saver, csv_logger],
         shuffle=True, verbose=2, batch_size=2,
     )
