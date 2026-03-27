@@ -6,7 +6,7 @@ import numpy as np
 class ExtendedDiscretizer:
     """50-channel discretizer with extended clinical variables."""
 
-    def __init__(self, timestep=0.8, store_masks=True, imput_strategy='zero', start_time='zero'):
+    def __init__(self, timestep=0.8, store_masks=True, impute_strategy='zero', start_time='zero'):
 
         self._id_to_channel = [
             'Alanine aminotransferase',
@@ -24,10 +24,10 @@ class ExtendedDiscretizer:
             'Diastolic blood pressure',
             'Fraction inspired oxygen',
             'Capillary refill rate',
-            'Glascow coma scale eye opening',
-            'Glascow coma scale motor response',
-            'Glascow coma scale total',
-            'Glascow coma scale verbal response',
+            'Glasgow coma scale eye opening',
+            'Glasgow coma scale motor response',
+            'Glasgow coma scale total',
+            'Glasgow coma scale verbal response',
             'Glucose',
             'Hematocrit',
             'Hemoglobin',
@@ -42,7 +42,7 @@ class ExtendedDiscretizer:
             'Mean corpuscular hemoglobin concentration',
             'Mean corpuscular volume',
             'Oxygen saturation',
-            'Partial pressure of cabon dioxide',
+            'Partial pressure of carbon dioxide',
             'Partial pressure of oxygen',
             'Partial thromboplastin time',
             'Peak inspiratory pressure',
@@ -81,10 +81,10 @@ class ExtendedDiscretizer:
             'Diastolic blood pressure': False,
             'Fraction inspired oxygen': False,
             'Capillary refill rate': True,
-            'Glascow coma scale eye opening': True,
-            'Glascow coma scale motor response': True,
-            'Glascow coma scale total': True,
-            'Glascow coma scale verbal response': True,
+            'Glasgow coma scale eye opening': True,
+            'Glasgow coma scale motor response': True,
+            'Glasgow coma scale total': True,
+            'Glasgow coma scale verbal response': True,
             'Glucose': False,
             'Hematocrit': False,
             'Hemoglobin': False,
@@ -99,7 +99,7 @@ class ExtendedDiscretizer:
             'Mean corpuscular hemoglobin concentration': False,
             'Mean corpuscular volume': False,
             'Oxygen saturation': False,
-            'Partial pressure of cabon dioxide': False,
+            'Partial pressure of carbon dioxide': False,
             'Partial pressure of oxygen': False,
             'Partial thromboplastin time': False,
             'Peak inspiratory pressure': False,
@@ -136,20 +136,20 @@ class ExtendedDiscretizer:
             'Diastolic blood pressure': [],
             'Fraction inspired oxygen': [],
             'Capillary refill rate': ['0.0', '1.0'],
-            'Glascow coma scale eye opening': [
+            'Glasgow coma scale eye opening': [
                 'To Pain', '3 To speech', '1 No Response', '4 Spontaneously',
                 'None', 'To Speech', 'Spontaneously', '2 To pain',
             ],
-            'Glascow coma scale motor response': [
+            'Glasgow coma scale motor response': [
                 '1 No Response', '3 Abnorm flexion', 'Abnormal extension',
                 'No response', '4 Flex-withdraws', 'Localizes Pain',
                 'Flex-withdraws', 'Obeys Commands', 'Abnormal Flexion',
                 '6 Obeys Commands', '5 Localizes Pain', '2 Abnorm extensn',
             ],
-            'Glascow coma scale total': [
+            'Glasgow coma scale total': [
                 '11', '10', '13', '12', '15', '14', '3', '5', '4', '7', '6', '9', '8',
             ],
-            'Glascow coma scale verbal response': [
+            'Glasgow coma scale verbal response': [
                 '1 No Response', 'No Response', 'Confused', 'Inappropriate Words',
                 'Oriented', 'No Response-ETT', '5 Oriented',
                 'Incomprehensible sounds', '1.0 ET/Trach', '4 Confused',
@@ -169,7 +169,7 @@ class ExtendedDiscretizer:
             'Mean corpuscular hemoglobin concentration': [],
             'Mean corpuscular volume': [],
             'Oxygen saturation': [],
-            'Partial pressure of cabon dioxide': [],
+            'Partial pressure of carbon dioxide': [],
             'Partial pressure of oxygen': [],
             'Partial thromboplastin time': [],
             'Peak inspiratory pressure': [],
@@ -206,10 +206,10 @@ class ExtendedDiscretizer:
             'Diastolic blood pressure': '59.0',
             'Fraction inspired oxygen': '0.21',
             'Capillary refill rate': '0.0',
-            'Glascow coma scale eye opening': '4 Spontaneously',
-            'Glascow coma scale motor response': '6 Obeys Commands',
-            'Glascow coma scale total': '15',
-            'Glascow coma scale verbal response': '5 Oriented',
+            'Glasgow coma scale eye opening': '4 Spontaneously',
+            'Glasgow coma scale motor response': '6 Obeys Commands',
+            'Glasgow coma scale total': '15',
+            'Glasgow coma scale verbal response': '5 Oriented',
             'Glucose': '128.0',
             'Hematocrit': '35.5',
             'Hemoglobin': '12.0',
@@ -224,7 +224,7 @@ class ExtendedDiscretizer:
             'Mean corpuscular hemoglobin concentration': '34',
             'Mean corpuscular volume': '88',
             'Oxygen saturation': '98.0',
-            'Partial pressure of cabon dioxide': '40',
+            'Partial pressure of carbon dioxide': '40',
             'Partial pressure of oxygen': '88',
             'Partial thromboplastin time': '70',
             'Peak inspiratory pressure': '12',
@@ -249,7 +249,7 @@ class ExtendedDiscretizer:
         self._timestep = timestep
         self._store_masks = store_masks
         self._start_time = start_time
-        self._imput_strategy = imput_strategy
+        self._impute_strategy = impute_strategy
 
         # for statistics
         self._done_count = 0
@@ -267,9 +267,9 @@ class ExtendedDiscretizer:
         'Bilirubin', 'Blood culture', 'Blood urea nitrogen', 'Calcium',
         'Calcium ionized', 'Capillary refill rate', 'Chloride', 'Cholesterol',
         'Creatinine', 'Diastolic blood pressure', 'Eosinophils',
-        'Fraction inspired oxygen', 'Glascow coma scale eye opening',
-        'Glascow coma scale motor response', 'Glascow coma scale total',
-        'Glascow coma scale verbal response', 'Glucose', 'Heart Rate', 'Height',
+        'Fraction inspired oxygen', 'Glasgow coma scale eye opening',
+        'Glasgow coma scale motor response', 'Glasgow coma scale total',
+        'Glasgow coma scale verbal response', 'Glucose', 'Heart Rate', 'Height',
         'Hematocrit', 'Hemoglobin', 'Lactate', 'Lactate dehydrogenase',
         'Lactic acid', 'Lymphocytes', 'Magnesium', 'Mean blood pressure',
         'Mean corpuscular hemoglobin', 'Mean corpuscular hemoglobin concentration',
@@ -320,10 +320,10 @@ class ExtendedDiscretizer:
 
     def _impute(self, data, mask, original_value, N_bins, begin_pos):
         """Apply the imputation strategy to fill missing bins."""
-        if (self._imput_strategy not in ['zero', 'normal_value', 'previous', 'next']):
+        if (self._impute_strategy not in ['zero', 'normal_value', 'previous', 'next']):
             raise ValueError("impute strategy is invalid")
 
-        if (self._imput_strategy in ['normal_value', 'previous']):
+        if (self._impute_strategy in ['normal_value', 'previous']):
             prev_values = [[] for i in range(len(self._id_to_channel))]
             for bin_id in range(N_bins):
                 for channel in self._id_to_channel:
@@ -331,16 +331,16 @@ class ExtendedDiscretizer:
                     if (mask[bin_id][channel_id] == 1):
                         prev_values[channel_id].append(original_value[bin_id][channel_id])
                         continue
-                    if (self._imput_strategy == 'normal_value'):
+                    if (self._impute_strategy == 'normal_value'):
                         imputed_value = self._normal_values[channel]
-                    if (self._imput_strategy == 'previous'):
+                    if (self._impute_strategy == 'previous'):
                         if (len(prev_values[channel_id]) == 0):
                             imputed_value = self._normal_values[channel]
                         else:
                             imputed_value = prev_values[channel_id][-1]
                     self._write(data, bin_id, channel, imputed_value, begin_pos)
 
-        if (self._imput_strategy == 'next'):
+        if (self._impute_strategy == 'next'):
             prev_values = [[] for i in range(len(self._id_to_channel))]
             for bin_id in range(N_bins - 1, -1, -1):
                 for channel in self._id_to_channel:

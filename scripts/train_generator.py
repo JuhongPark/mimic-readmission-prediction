@@ -35,7 +35,7 @@ def main():
     embeddings, word_indices = get_embeddings(corpus='claims_codes_hs', dim=300)
     discretizer = StandardDiscretizer(
         timestep=float(hp['timestep']), store_masks=True,
-        imput_strategy='previous', start_time='zero',
+        impute_strategy='previous', start_time='zero',
     )
 
     # Create generators
