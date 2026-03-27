@@ -7,8 +7,8 @@
 ## Why
 
 - Unplanned ICU readmissions → higher mortality, longer stays, increased costs
-- Most models use structured data **or** clinical notes — rarely both
-- This project combines **timeseries + diagnoses + demographics + discharge notes** into a single prediction
+- Single-modality models miss complementary signals across vitals, diagnoses, and clinical text
+- This project fuses **four heterogeneous data sources** into a unified temporal representation for prediction
 
 ---
 
@@ -22,9 +22,9 @@
 | **Discharge notes** | [BioWordVec](https://github.com/ncbi-nlp/BioWordVec) embeddings *(optional)* | 200 |
 
 **Key decisions:**
-- Custom discretizer with 4 imputation strategies for irregular clinical sampling
-- Balanced sampling to handle class imbalance (readmissions are rare)
-- SHAP analysis for per-patient feature explanations
+- Custom discretizer with 4 imputation strategies — clinical timeseries are irregularly sampled and missing-data handling directly impacts model quality
+- Balanced sampling — readmissions are rare events, naive training biases toward the majority class
+- SHAP explainability — interpretability matters for clinical decision support
 
 ---
 
@@ -36,6 +36,8 @@ Diagnoses   ──┤ Concat       LSTM-CNN         Sigmoid
 Demographics ─┤ per      →   (depth=2,   →    P(readmit
 Discharge   ──┘ timestep      dim=16)          ≤ 30 days)
 ```
+
+Time-invariant features (diagnoses, demographics) are broadcast across all 48 timesteps before concatenation.
 
 **Metrics:** AUROC | AUPRC | Accuracy | Precision | Recall
 
