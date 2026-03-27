@@ -82,18 +82,27 @@ See [`data/README.md`](data/README.md) for expected data layout.
 
 ## Discussion
 
-**ML**
-- Multi-modal alignment is a design choice, not just concatenation. Broadcasting time-invariant features (diagnoses, demographics) across timesteps treats them as constant context — a simplification that works here but assumes these signals don't interact with temporal dynamics.
-- The discretizer encodes clinical domain knowledge directly into preprocessing. Imputation strategy (forward fill vs. zero) is effectively a prior about how missing clinical data should behave — and the model learns from that prior, not from the raw observations.
-- Balanced sampling trades calibration for discrimination. The generator resamples each epoch to equalize classes, which improves the decision boundary but means model outputs diverge from true readmission probability. Any deployment would require post-hoc recalibration.
+**ML design tradeoffs**
+
+| Decision | Tradeoff |
+|:---------|:---------|
+| **Broadcast static features** | Diagnoses and demographics are copied to every timestep as constant context. Simple, but assumes no temporal interaction with these signals. |
+| **Imputation as prior** | Forward fill assumes "last value persists." The model learns from this assumption, not raw observations — imputation strategy shapes what the model sees. |
+| **Balanced sampling** | Equalizes classes each epoch → better decision boundary, but outputs are no longer calibrated to true prevalence. Deployment requires recalibration. |
 
 **Interpretability**
-- SHAP on multi-modal temporal inputs raises an attribution ambiguity: when static features (disease embeddings) are broadcast to every timestep, SHAP may assign them timestep-specific importance that has no meaningful temporal interpretation. Disentangling "which modality mattered" from "which timestep mattered" requires modality-level ablation beyond standard feature attribution.
-- Forward-fill imputation creates a subtler problem — SHAP can attribute importance to imputed values that were never actually measured. Attribution points to what the model sees, not what was clinically observed. This gap between model-level and ground-truth explanation is worth surfacing to end users.
 
-**Deployment**
-- Optimizing AUROC on balanced data may not align with the actual clinical goal. High discriminative performance doesn't guarantee that acting on the model's predictions reduces readmissions — the metric optimized and the outcome desired are not the same objective.
-- Demographic features (ethnicity, insurance) reflect systemic patterns in the training data. The model may perform unevenly across subgroups not because of a modeling error, but because the data itself encodes unequal care history.
+| Issue | Why it matters |
+|:------|:---------------|
+| **Temporal attribution ambiguity** | Static features broadcast to all timesteps receive timestep-specific SHAP values — but that temporal variation comes from the model's hidden state, not from the input changing. "Which modality" and "which timestep" are conflated. |
+| **Imputed value attribution** | SHAP attributes importance to forward-filled values that were never measured. A mask channel flags observation status, but feature-level attribution still operates on the imputed input — what the model explains ≠ what was clinically observed. |
+
+**Deployment considerations**
+
+| Concern | Detail |
+|:--------|:-------|
+| **Metric ≠ objective** | High AUROC on balanced data doesn't guarantee that acting on predictions reduces readmissions. The metric optimized and the clinical outcome desired are not the same. |
+| **Encoded disparities** | Demographic features reflect historical care patterns. Uneven subgroup performance may stem from the data, not the model. |
 
 ---
 
