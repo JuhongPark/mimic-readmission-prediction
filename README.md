@@ -31,15 +31,15 @@
 ## Architecture
 
 ```
-Timeseries  ──┐
-Diagnoses   ──┤ Concat       LSTM-CNN         Sigmoid
-Demographics ─┤ per      →   (depth=2,   →    P(readmit
-Discharge   ──┘ timestep      dim=16)          ≤ 30 days)
+[Timeseries   76d] ─┐
+[Diagnoses   300d] ──┼── Concat per timestep ── LSTM-CNN (depth=2, dim=16) ── P(readmit ≤ 30d)
+[Demographics 14d] ──┤
+[Discharge   200d] ──┘   (390-dim, or 590 with discharge notes)
 ```
 
 Time-invariant features (diagnoses, demographics) are broadcast across all 48 timesteps before concatenation.
 
-**Metrics:** AUROC | AUPRC | Accuracy | Precision | Recall
+**Evaluation:** AUROC | AUPRC | Accuracy | Precision | Recall
 
 ---
 
@@ -66,19 +66,40 @@ tests/           Unit tests for core utilities
 
 ```bash
 pip install -e /path/to/MIMIC-III_ICU_Readmission_Analysis
-pip install -e .
+pip install -e ".[dev]"
 export MIMIC_DATA_ROOT=/path/to/your/data
-```
 
-```bash
 python scripts/preprocess.py                              # 1. Preprocess
 python scripts/train_generator.py                         # 2. Train (defaults)
 python scripts/train_generator.py --epochs 100 --lr 5e-4  #    (custom)
 python scripts/train_generator_wordvec.py                 #    (+ discharge note vectors)
+pytest                                                    # 3. Run tests
 ```
 
 See [`data/README.md`](data/README.md) for expected data layout.
 
 ---
 
-MIT License - Copyright (c) 2020 Juhong Park
+## Discussion
+
+**ML design tradeoffs**
+
+| Decision | Tradeoff |
+|:---------|:---------|
+| **Broadcast static features** | Diagnoses and demographics are copied to every timestep as constant context. Simple, but assumes no temporal interaction with these signals. |
+| **Imputation as prior** | Forward fill assumes "last value persists." The model learns from this assumption, not raw observations — imputation strategy shapes what the model sees. |
+| **Balanced sampling** | Equalizes classes each epoch → better decision boundary, but outputs are no longer calibrated to true prevalence. Deployment requires recalibration. |
+
+**Interpretability**
+
+| Issue | Why it matters |
+|:------|:---------------|
+| **Temporal attribution ambiguity** | Static features broadcast to all timesteps receive timestep-specific SHAP values — but that temporal variation comes from the model's hidden state, not from the input changing. "Which modality" and "which timestep" are conflated. |
+| **Imputed value attribution** | SHAP attributes importance to forward-filled values that were never measured. A mask channel flags observation status, but feature-level attribution still operates on the imputed input — what the model explains ≠ what was clinically observed. |
+
+**Deployment considerations**
+
+| Concern | Detail |
+|:--------|:-------|
+| **Metric ≠ objective** | High AUROC on balanced data doesn't guarantee that acting on predictions reduces readmissions. The metric optimized and the clinical outcome desired are not the same. |
+| **Encoded disparities** | Demographic features reflect historical care patterns. Uneven subgroup performance may stem from the data, not the model. |
