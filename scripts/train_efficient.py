@@ -14,9 +14,8 @@ from keras.callbacks import ModelCheckpoint, CSVLogger
 from keras.optimizers import Adam
 from mimic3models.common_keras_models import lstm_cnn
 from mimic3models.preprocessing import Normalizer
-from mimic3models import metrics
 from mimic3models import keras_utils
-from mimic3models.readmission import utils
+from src.evaluation.metrics import print_metrics_binary, save_results
 from utilities.data_loader import get_embeddings
 
 from config.paths import (
@@ -142,10 +141,10 @@ def main():
     )
     predictions = model.predict(test_data, batch_size=1, verbose=1)
     predictions = np.array(predictions)[:, 0]
-    metrics.print_metrics_binary(test_labels, predictions)
+    results = print_metrics_binary(test_labels, predictions)
 
     result_path = os.path.join(output_path, "test_predictions.csv")
-    utils.save_results(test_names, predictions, test_labels, result_path)
+    save_results(results, test_names, predictions, test_labels, result_path)
 
 
 if __name__ == '__main__':
