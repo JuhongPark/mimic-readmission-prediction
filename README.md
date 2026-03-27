@@ -103,7 +103,3 @@ See [`data/README.md`](data/README.md) for expected data layout.
 |:--------|:-------|
 | **Metric ≠ objective** | High AUROC on balanced data doesn't guarantee that acting on predictions reduces readmissions. The metric optimized and the clinical outcome desired are not the same. |
 | **Encoded disparities** | Demographic features reflect historical care patterns. Uneven subgroup performance may stem from the data, not the model. |
-
----
-
-MIT License - Copyright (c) 2020 Juhong Park
