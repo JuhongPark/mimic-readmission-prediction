@@ -127,3 +127,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Project-specific
+data/created_readmission_data/
+data/preprocessed/
+data/train_val_test/
+data/*.pickle
+data/*.pk
+*.hdf5
+*.state
+keras_logs/
+outputs/
