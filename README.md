@@ -70,9 +70,10 @@ export MIMIC_DATA_ROOT=/path/to/your/data
 ```
 
 ```bash
-python scripts/preprocess.py                  # 1. Preprocess
-python scripts/train_generator.py             # 2. Train (generator, memory efficient)
-python scripts/train_generator_wordvec.py     # 2. Train (+ discharge note vectors)
+python scripts/preprocess.py                              # 1. Preprocess
+python scripts/train_generator.py                         # 2. Train (defaults)
+python scripts/train_generator.py --epochs 100 --lr 5e-4  #    (custom)
+python scripts/train_generator_wordvec.py                 #    (+ discharge note vectors)
 ```
 
 See [`data/README.md`](data/README.md) for expected data layout.

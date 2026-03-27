@@ -6,9 +6,10 @@ import pandas as pd
 def disease_embedding(
     embeddings: np.ndarray, word_indices: dict[str, int], diseases_list: list[list[str]]
 ) -> list[list[float]]:
+    emb_dim = embeddings.shape[1]
     emb_list = []
     for diseases in diseases_list:
-        emb_period = [0] * 300
+        emb_period = [0] * emb_dim
         skip = 0
         for disease in diseases:
             k = 'IDX_' + str(disease)
