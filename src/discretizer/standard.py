@@ -4,15 +4,15 @@ import numpy as np
 class StandardDiscretizer:
     """17-channel discretizer for model training scripts."""
 
-    def __init__(self, timestep=0.8, store_masks=True, imput_strategy='zero', start_time='zero'):
+    def __init__(self, timestep=0.8, store_masks=True, impute_strategy='zero', start_time='zero'):
         self._id_to_channel = [
             'Capillary refill rate',
             'Diastolic blood pressure',
             'Fraction inspired oxygen',
-            'Glascow coma scale eye opening',
-            'Glascow coma scale motor response',
-            'Glascow coma scale total',
-            'Glascow coma scale verbal response',
+            'Glasgow coma scale eye opening',
+            'Glasgow coma scale motor response',
+            'Glasgow coma scale total',
+            'Glasgow coma scale verbal response',
             'Glucose',
             'Heart Rate',
             'Height',
@@ -29,10 +29,10 @@ class StandardDiscretizer:
             'Capillary refill rate': True,
             'Diastolic blood pressure': False,
             'Fraction inspired oxygen': False,
-            'Glascow coma scale eye opening': True,
-            'Glascow coma scale motor response': True,
-            'Glascow coma scale total': True,
-            'Glascow coma scale verbal response': True,
+            'Glasgow coma scale eye opening': True,
+            'Glasgow coma scale motor response': True,
+            'Glasgow coma scale total': True,
+            'Glasgow coma scale verbal response': True,
             'Glucose': False,
             'Heart Rate': False,
             'Height': False,
@@ -48,20 +48,20 @@ class StandardDiscretizer:
             'Capillary refill rate': ['0.0', '1.0'],
             'Diastolic blood pressure': [],
             'Fraction inspired oxygen': [],
-            'Glascow coma scale eye opening': [
+            'Glasgow coma scale eye opening': [
                 'To Pain', '3 To speech', '1 No Response', '4 Spontaneously',
                 'None', 'To Speech', 'Spontaneously', '2 To pain',
             ],
-            'Glascow coma scale motor response': [
+            'Glasgow coma scale motor response': [
                 '1 No Response', '3 Abnorm flexion', 'Abnormal extension',
                 'No response', '4 Flex-withdraws', 'Localizes Pain',
                 'Flex-withdraws', 'Obeys Commands', 'Abnormal Flexion',
                 '6 Obeys Commands', '5 Localizes Pain', '2 Abnorm extensn',
             ],
-            'Glascow coma scale total': [
+            'Glasgow coma scale total': [
                 '11', '10', '13', '12', '15', '14', '3', '5', '4', '7', '6', '9', '8',
             ],
-            'Glascow coma scale verbal response': [
+            'Glasgow coma scale verbal response': [
                 '1 No Response', 'No Response', 'Confused', 'Inappropriate Words',
                 'Oriented', 'No Response-ETT', '5 Oriented',
                 'Incomprehensible sounds', '1.0 ET/Trach', '4 Confused',
@@ -82,10 +82,10 @@ class StandardDiscretizer:
             'Capillary refill rate': '0.0',
             'Diastolic blood pressure': '59.0',
             'Fraction inspired oxygen': '0.21',
-            'Glascow coma scale eye opening': '4 Spontaneously',
-            'Glascow coma scale motor response': '6 Obeys Commands',
-            'Glascow coma scale total': '15',
-            'Glascow coma scale verbal response': '5 Oriented',
+            'Glasgow coma scale eye opening': '4 Spontaneously',
+            'Glasgow coma scale motor response': '6 Obeys Commands',
+            'Glasgow coma scale total': '15',
+            'Glasgow coma scale verbal response': '5 Oriented',
             'Glucose': '128.0',
             'Heart Rate': '86',
             'Height': '170.0',
@@ -101,7 +101,7 @@ class StandardDiscretizer:
         self._timestep = timestep
         self._store_masks = store_masks
         self._start_time = start_time
-        self._imput_strategy = imput_strategy
+        self._impute_strategy = impute_strategy
         self._done_count = 0
         self._empty_bins_sum = 0
         self._unused_data_sum = 0
@@ -116,9 +116,9 @@ class StandardDiscretizer:
         'Bilirubin', 'Blood culture', 'Blood urea nitrogen', 'Calcium',
         'Calcium ionized', 'Capillary refill rate', 'Chloride', 'Cholesterol',
         'Creatinine', 'Diastolic blood pressure', 'Eosinophils',
-        'Fraction inspired oxygen', 'Glascow coma scale eye opening',
-        'Glascow coma scale motor response', 'Glascow coma scale total',
-        'Glascow coma scale verbal response', 'Glucose', 'Heart Rate', 'Height',
+        'Fraction inspired oxygen', 'Glasgow coma scale eye opening',
+        'Glasgow coma scale motor response', 'Glasgow coma scale total',
+        'Glasgow coma scale verbal response', 'Glucose', 'Heart Rate', 'Height',
         'Hematocrit', 'Hemoglobin', 'Lactate', 'Lactate dehydrogenase',
         'Lactic acid', 'Lymphocytes', 'Magnesium', 'Mean blood pressure',
         'Mean corpuscular hemoglobin', 'Mean corpuscular hemoglobin concentration',
@@ -208,10 +208,10 @@ class StandardDiscretizer:
                 original_value[bin_id][channel_id] = row[j]
 
         # impute missing values
-        if self._imput_strategy not in ['zero', 'normal_value', 'previous', 'next']:
+        if self._impute_strategy not in ['zero', 'normal_value', 'previous', 'next']:
             raise ValueError("impute strategy is invalid")
 
-        if self._imput_strategy in ['normal_value', 'previous']:
+        if self._impute_strategy in ['normal_value', 'previous']:
             prev_values = [[] for _ in range(N_channels)]
             for bin_id in range(N_bins):
                 for channel in self._id_to_channel:
@@ -219,16 +219,16 @@ class StandardDiscretizer:
                     if mask[bin_id][channel_id] == 1:
                         prev_values[channel_id].append(original_value[bin_id][channel_id])
                         continue
-                    if self._imput_strategy == 'normal_value':
+                    if self._impute_strategy == 'normal_value':
                         imputed_value = self._normal_values[channel]
-                    if self._imput_strategy == 'previous':
+                    if self._impute_strategy == 'previous':
                         if len(prev_values[channel_id]) == 0:
                             imputed_value = self._normal_values[channel]
                         else:
                             imputed_value = prev_values[channel_id][-1]
                     write(data, bin_id, channel, imputed_value, begin_pos)
 
-        if self._imput_strategy == 'next':
+        if self._impute_strategy == 'next':
             prev_values = [[] for _ in range(N_channels)]
             for bin_id in range(N_bins - 1, -1, -1):
                 for channel in self._id_to_channel:

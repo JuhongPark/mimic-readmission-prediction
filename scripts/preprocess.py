@@ -14,7 +14,7 @@ from src.normalizer import Normalizer
 def main():
     discretizer = ExtendedDiscretizer(
         timestep=0.8, store_masks=True,
-        imput_strategy='previous', start_time='zero',
+        impute_strategy='previous', start_time='zero',
     )
 
     # Example usage:
