@@ -14,7 +14,8 @@ def disease_embedding(embeddings, word_indices, diseases_list):
             index = word_indices[k]
             emb_disease = embeddings[index]
             emb_period = [sum(x) for x in zip(emb_period, emb_disease)]
-        emb_period = [x / len(diseases) for x in emb_period]
+        found = len(diseases) - skip
+        emb_period = [x / found for x in emb_period] if found > 0 else emb_period
         emb_list.append(emb_period)
     return emb_list
 
@@ -26,12 +27,11 @@ def get_wordvectors(names, discharge_wv):
         x = element.split('_')
         namelist.append(x[2])
     for icustay in namelist:
-        wordvector = discharge_wv[discharge_wv.ICUSTAY_ID == icustay].k500_mean_wv
-        if len(wordvector) != 200:
-            wordvector = [0] * 200
-            wordvector_list.append(wordvector)
+        matched = discharge_wv[discharge_wv.ICUSTAY_ID == icustay].k500_mean_wv
+        if len(matched) == 0:
+            wordvector_list.append([0] * 200)
         else:
-            wordvector_list.append(wordvector[0].reshape((-1, 1)))
+            wordvector_list.append(matched.iloc[0].reshape((-1, 1)))
     return wordvector_list
 
 
