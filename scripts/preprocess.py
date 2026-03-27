@@ -2,11 +2,6 @@
 Preprocessing script using the ExtendedDiscretizer (50 channels).
 Used for initial data preparation before model training.
 """
-import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 from src.discretizer import ExtendedDiscretizer
 from src.normalizer import Normalizer
 

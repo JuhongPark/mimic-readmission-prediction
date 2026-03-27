@@ -4,11 +4,9 @@ Generator version with word vectors: adds 200-dim discharge note word vectors
 as extra features (input_dim=590 instead of 390).
 """
 import os
-import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import keras
