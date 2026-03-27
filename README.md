@@ -54,6 +54,7 @@ src/
 scripts/         Preprocess + 3 training variants
 notebooks/       SHAP explainability, NER analysis
 nlp/             BioWordVec loader
+tests/           Unit tests for core utilities
 ```
 
 ---
@@ -64,7 +65,7 @@ nlp/             BioWordVec loader
 
 ```bash
 pip install -e /path/to/MIMIC-III_ICU_Readmission_Analysis
-pip install -r requirements.txt
+pip install -e .
 export MIMIC_DATA_ROOT=/path/to/your/data
 ```
 

@@ -3,10 +3,8 @@ Train LSTM-CNN model for ICU readmission prediction.
 Generator version: uses Keras Sequence for memory-efficient data loading.
 """
 import os
-import sys
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import keras
