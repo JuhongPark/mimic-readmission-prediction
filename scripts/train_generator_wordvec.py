@@ -13,7 +13,6 @@ os.environ["KERAS_BACKEND"] = "tensorflow"
 
 import keras
 from keras.optimizers import Adam
-from scipy.stats import norm
 from mimic3models.common_keras_models import lstm_cnn
 from mimic3models.preprocessing import Normalizer
 from utilities.data_loader import get_embeddings
@@ -43,13 +42,6 @@ def main():
         timestep=float(hp['timestep']), store_masks=True,
         impute_strategy='previous', start_time='zero',
     )
-
-    # Compute normal distributions for embedding dimensions
-    norm_dist_list = [0] * 300
-    for index in range(len(norm_dist_list)):
-        index_data = embeddings[:, index]
-        dist = norm(index_data.mean(), index_data.std())
-        norm_dist_list[index] = dist
 
     # Load discharge word vectors
     discharge_wv = pd.read_pickle(DISCHARGE_WV_PICKLE)
