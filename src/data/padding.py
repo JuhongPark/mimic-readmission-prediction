@@ -1,7 +1,8 @@
+from __future__ import annotations
 import numpy as np
 
 
-def pad_zeros(arr, min_length=None, max_len=48):
+def pad_zeros(arr: list[np.ndarray], min_length: int | None = None, max_len: int = 48) -> np.ndarray:
     dtype = arr[0].dtype
     ret = [
         np.concatenate(
