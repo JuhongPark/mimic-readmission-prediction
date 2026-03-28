@@ -90,29 +90,30 @@ See [`data/README.md`](data/README.md) for expected data layout.
 | **Imputation as prior** | Forward fill assumes "last value persists." The model learns from this assumption, not raw observations — imputation strategy shapes what the model sees. |
 | **Balanced sampling** | Equalizes classes each epoch → better decision boundary, but outputs are no longer calibrated to true prevalence. Deployment requires recalibration. |
 
-**ML achievements & implications**
+**Key finding — Interpretability enabled clinical adoption**
+
+Physicians initially declined to use the model because they could not trust a black-box prediction. Integrating SHAP (DeepExplainer, KernelExplainer) to produce per-feature, per-prediction attribution with force plots and summary plots changed that — once clinicians could inspect which variables drove each prediction and verify alignment with medical knowledge, they were willing to incorporate the model into their decision-making. Interpretability was not a nice-to-have; it was the prerequisite for adoption.
+
+| Interpretability challenge | Detail |
+|:---------------------------|:-------|
+| **Temporal attribution ambiguity** | Static features broadcast to all timesteps receive timestep-specific SHAP values — but that variation comes from the model's hidden state, not from the input changing. |
+| **Imputed value attribution** | SHAP attributes importance to forward-filled values that were never measured — what the model explains ≠ what was clinically observed. |
+
+**ML achievements**
 
 | Area | Detail |
 |:-----|:-------|
-| **Multimodal clinical fusion** | Fuses four heterogeneous sources (timeseries, ICD-9 embeddings, demographics, discharge notes) into a 390-dimensional temporal input (590 with discharge notes). Each modality captures a different clinical signal — vitals trajectory, diagnostic history, patient context, and narrative clinical reasoning — that a single source cannot provide alone. |
-| **Biomedical NLP pipeline** | Extracts drug and disease entities from 12 discharge note sections via BC5CDR NER, then maps them to 200-dimensional BioWordVec embeddings (pre-trained on PubMed + MIMIC-III). Converts unstructured clinical text into dense vector features without task-specific fine-tuning. |
-| **Explainability for clinical adoption** | Physicians initially declined to use the model because they could not trust a black-box prediction. Integrating SHAP (DeepExplainer, KernelExplainer) to produce per-feature attribution with force plots and summary plots changed that — once clinicians could inspect which variables drove each prediction and verify alignment with medical knowledge, they were willing to incorporate the model into their decision-making. Interpretability was not a nice-to-have; it was the prerequisite for clinical adoption. |
-| **End-to-end reproducibility** | Environment-configurable paths, Keras Sequence generators for memory-efficient training, and a modular pipeline (preprocess → train → evaluate → explain) enable full reproduction from raw MIMIC-III data to SHAP visualizations. |
-
-**Interpretability**
-
-| Issue | Why it matters |
-|:------|:---------------|
-| **Temporal attribution ambiguity** | Static features broadcast to all timesteps receive timestep-specific SHAP values — but that temporal variation comes from the model's hidden state, not from the input changing. "Which modality" and "which timestep" are conflated. |
-| **Imputed value attribution** | SHAP attributes importance to forward-filled values that were never measured. A mask channel flags observation status, but feature-level attribution still operates on the imputed input — what the model explains ≠ what was clinically observed. |
+| **Multimodal fusion** | Four heterogeneous sources → 390-dim temporal input (590 with discharge notes), capturing complementary clinical signals a single modality cannot provide. |
+| **Biomedical NLP pipeline** | BC5CDR NER extracts drug/disease entities from 12 discharge note sections → 200-dim BioWordVec embeddings (PubMed + MIMIC-III), no task-specific fine-tuning required. |
+| **End-to-end reproducibility** | Modular pipeline (preprocess → train → evaluate → explain) with environment-configurable paths and memory-efficient Keras Sequence generators. |
 
 **AI safety & security considerations**
 
 | Concern | Detail |
 |:--------|:-------|
-| **De-identified data & access control** | MIMIC-III requires PhysioNet credentialed access and CITI ethics training. Records are de-identified, but derived artifacts (embeddings, SHAP values) may carry re-identification risk when linked with auxiliary data — model outputs warrant the same access controls as the source data. |
-| **Explainability as a safety mechanism** | SHAP attribution provides an audit trail per prediction. Physician collaboration showed that without this layer, clinicians reject the model entirely — explainability is not just a technical feature but the trust boundary that determines whether an AI system is used or ignored in practice. |
-| **Calibration & decision safety** | Balanced sampling shifts the decision threshold away from true prevalence. Without recalibration, deployment risks over-alerting (wasted clinical resources) or under-alerting (missed readmissions). Threshold tuning on prevalence-representative data is required. |
-| **Metric ≠ objective** | High AUROC on balanced data does not guarantee that acting on predictions reduces readmissions. The metric optimized and the clinical outcome desired are not the same. |
-| **Encoded disparities** | Demographic features reflect historical care patterns. Uneven subgroup performance may stem from the data, not the model — fairness auditing across subgroups is required before deployment. |
-| **NLP pipeline integrity** | Discharge note parsing relies on section header matching — non-standard formatting yields empty or misaligned entity extractions. Silent failures propagate incorrect feature vectors without error signals, requiring input validation at the pipeline boundary. |
+| **Explainability as trust boundary** | Without SHAP attribution, clinicians reject the model entirely — explainability is the boundary that determines whether an AI system is used or ignored in clinical practice. |
+| **De-identified data & access control** | MIMIC-III requires PhysioNet credentialed access. Derived artifacts (embeddings, SHAP values) may carry re-identification risk when linked with auxiliary data — model outputs warrant the same access controls as source data. |
+| **Calibration & decision safety** | Balanced sampling shifts the threshold away from true prevalence — deployment without recalibration risks over-alerting or under-alerting. |
+| **Metric ≠ objective** | High AUROC on balanced data does not guarantee that acting on predictions reduces readmissions. |
+| **Encoded disparities** | Demographic features reflect historical care patterns — fairness auditing across subgroups is required before deployment. |
+| **NLP pipeline integrity** | Non-standard discharge note formatting yields silent NLP failures that propagate incorrect feature vectors without error signals. |
