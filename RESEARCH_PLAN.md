@@ -136,11 +136,11 @@ Cluster repos into categories:
 | Source-side fix to notebook (§3) | done (cells 5/8/14/15 edited, committed, not re-run) |
 | Literature review (§4) | done |
 | Candidate repo collection (§5.1, pilot set) | **done** — 5 repos selected (§9.1) |
-| Audit checklist applied (§5.2) | in progress |
-| Pattern classification (§5.3) | not started |
+| Audit checklist applied (§5.2) | 3/5 done — this repo (§2), TimFrenzel (§9.2), yzhouas (§9.2) |
+| Pattern classification (§5.3) | draft taxonomy (§9.2), pending 2 more audits |
 | Draft paper | not started |
 
-**Next action**: apply the §5.2 checklist to pilot repo #2 (TimFrenzel/MIMIC-III-Clinical-NLP) and repo #3 (yzhouas/MIMIC-III_ICU_Readmission_Analysis).
+**Next action**: audit pilot repo #4 (NikhilMY/ClinicalMind — ClinicalBERT fusion) and #5 (andrewwlong/mimic_bow — BOW baseline).
 
 ---
 
@@ -200,3 +200,59 @@ Searched GitHub via `gh api /search/repositories` with queries: `MIMIC+readmissi
 | [lokesh9899/Mortality-Risk-Readmission-Prediction-NLP-Clinical-Bert-LLM](https://github.com/lokesh9899/Mortality-Risk-Readmission-Prediction-NLP-Clinical-Bert-LLM) | 2 | ClinicalBERT + XGBoost fusion |
 | [altairBASIC/BDCC-reproduction](https://github.com/altairBASIC/BDCC-reproduction) | 1 | ICD prediction reproduction; not readmission but uses clinical NLP heavily |
 | [Kbmukumbi/diabetes-nlp-structured-extraction](https://github.com/Kbmukumbi/diabetes-nlp-structured-extraction) | 0 | Rich medication entity types (DOSE/ROUTE/FREQUENCY) — potential "P3 fully typed" positive example |
+
+### 9.2 Pilot audits: repos 2 and 3 (2026-04-15)
+
+**Repo 2 — TimFrenzel/MIMIC-III-Clinical-NLP** (single `mimic_nlp.py`, 2,530 lines, 114 KB)
+
+| Checklist | Finding |
+|-----------|---------|
+| NER model | scispacy + BC5CDR (`en_ner_bc5cdr_md`) + general-purpose spacy + MedSpacy + ClinicalBERT embeddings |
+| Preserve `ent.label_`? | **Yes at extraction** — lines 354/358/376 store `(ent.text, ent.label_)` tuples for spacy, scispacy, and medspacy pipelines |
+| Pooled untyped downstream? | **Yes at aggregation** — line 425–428 `set(ent[0].lower() for ent in row['scispacy_entities'])` drops the label for overlap statistics; line 464–466 `tokens = [token.lower() for token, _ in ents]` **explicitly unpacks and discards** the label when preparing Word2Vec training tokens |
+| Uses structured ICD-9 alongside? | Filters notes BY ICD-9 stroke codes (430/431/434.x) as an input selector, but ICD-9 is not a model feature |
+| Redundancy / ablation analysis | None — task is entity extraction + clustering, not prediction |
+| Claim-vs-code consistency | Consistent. The README promises entity extraction; the code delivers. No prediction is claimed |
+| Feature dimension / plug-in | Output is Word2Vec embeddings (100-d) and t-SNE visualisations; no prediction head |
+
+**Pattern**: **P2 — type preserved at extraction, pooled untyped downstream.** The label is captured at extraction, rendered in HTML for visualisation (lines 631, 738), counted for entity-type distribution analysis (line 780), and **then explicitly discarded** in the Word2Vec token-preparation step (line 466: `for token, _ in ents`). Because the task is not prediction, no AUROC is harmed — but the aggregation pattern, if copied into a prediction pipeline, is exactly the failure mode this audit is about. Subtle but damning: a pipeline that installs BC5CDR *and* captures labels *and* visualises types still loses entity-type information when building its main output representation.
+
+---
+
+**Repo 3 — yzhouas/MIMIC-III_ICU_Readmission_Analysis** (Lin et al. 2018 bioRxiv paper code)
+
+| Checklist | Finding |
+|-----------|---------|
+| NER model | **None.** No NLP imports, no spacy, no scispacy, no transformer text encoder. Pure LSTM on structured features |
+| Preserve `ent.label_`? | N/A |
+| Pooled untyped downstream? | N/A |
+| Uses structured ICD-9 alongside? | **Yes.** `read_diagnose()` loads ICD-9 codes from `diagnoses.csv`; `get_diseases()` returns per-stay code lists; these feed a `get_embeddings()` lookup (likely a BioWordVec-by-code-string path) |
+| Redundancy / ablation analysis | **Yes — explicit ablation directories** `mimic3models/readmission_no_d/`, `readmission_no_icd9/`, `readmission_f48/`. The authors clearly treated ICD-9 as a separable feature and ran ablations against it |
+| Claim-vs-code consistency | Consistent — README and paper describe an LSTM on vitals + diagnoses + demographics, and that is what the code does. No NLP is claimed |
+| Feature dimension / plug-in | LSTM input = timeseries + static features; exact dim not traced in this pass |
+
+**Pattern**: **P4 — no NER at all.**
+
+**Lineage finding (the important part)**: this is the **direct ancestor** of the audited repo. The functions `g_map`, `e_map`, `i_map`, `read_diagnose`, `get_diseases`, `read_demographic` in `mimic3models/readmission/main.py` are byte-for-byte identical (modulo Python 3 syntax updates and an `.ix` → `.loc` fix) to the audited repo's `config/defaults.py:1-21` and `src/data/reader.py:30-85`. The 300-dim "disease embedding" in the audited repo is a **direct inheritance** from yzhouas's ICD-9 code embedding — it has nothing to do with the NER notebook that was added later.
+
+**Implication** (this changes the finding for the case study): the audited repo's P1 pattern is actually a *composite*:
+1. The NER notebook (`nlp_bc5cdr_ner.ipynb`) was added on top of a non-NER yzhouas pipeline as a bolt-on.
+2. At extraction, the notebook strips `ent.label_` — the classic P1.
+3. Downstream, the NER pipeline is **never wired into the model's disease feature**; the model keeps using the inherited yzhouas ICD-9 path.
+4. The README conflates "BC5CDR NER → 200-d BioWordVec" with "300-d disease embedding", misleading the reader into thinking they are the same data flow when they are two disjoint paths.
+
+This is a more severe finding than originally thought. The source-side fix in commit `6ae97f8` addresses (2) but not (3) — even with typed embeddings now saved to `keyword_discharge_note_wv.pk`, the model's feature pipeline has no consumer for them.
+
+---
+
+**Revised draft taxonomy** (after 3 audits; will be finalized after repos 4 and 5):
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| P1 | Type stripped at NER extraction step | JuhongPark (original `get_matched` in cell 5 before fix) |
+| P2 | Type preserved at extraction, then pooled untyped in downstream aggregation | TimFrenzel (`for token, _ in ents` at line 466) |
+| P3 | Fully typed throughout the pipeline — each entity type is a separate feature channel | (none found yet) |
+| P4 | No NER at all (baseline category — a pipeline cannot have the pattern if it never runs NER) | yzhouas |
+| P5 | NER runs, but its outputs are orphaned from the model's feature pipeline; a "bolt-on" that is never connected | JuhongPark (after accounting for the yzhouas inheritance — NER notebook outputs do not reach `features.py::disease_embedding`, which uses structured ICD-9) |
+
+This repo is thus a **P1 + P5 composite** — the worst of both worlds. TimFrenzel is a clean P2.
