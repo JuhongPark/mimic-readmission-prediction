@@ -133,14 +133,14 @@ Cluster repos into categories:
 | Step | Status |
 |------|--------|
 | Audit this repo (§2) | done |
-| Source-side fix to notebook (§3) | done (cells 5/8/14/15 edited, not re-run) |
+| Source-side fix to notebook (§3) | done (cells 5/8/14/15 edited, committed, not re-run) |
 | Literature review (§4) | done |
-| Candidate repo collection (§5.1) | not started |
-| Audit checklist applied (§5.2) | not started |
+| Candidate repo collection (§5.1, pilot set) | **done** — 5 repos selected (§9.1) |
+| Audit checklist applied (§5.2) | in progress |
 | Pattern classification (§5.3) | not started |
 | Draft paper | not started |
 
-**Next action**: §5.1 pilot — collect 5 candidate repos and dry-run the checklist to verify the pattern exists outside this repo.
+**Next action**: apply the §5.2 checklist to pilot repo #2 (TimFrenzel/MIMIC-III-Clinical-NLP) and repo #3 (yzhouas/MIMIC-III_ICU_Readmission_Analysis).
 
 ---
 
@@ -162,5 +162,41 @@ Cluster repos into categories:
 ## 8. Notes
 
 - **Data access**: `MIMIC_DATA_ROOT` is not set on this machine; `data/` contains only a README. Any empirical validation is blocked until data is available. This plan is designed to not require it.
-- **Committed state**: nothing committed. The only real change to the repo is `notebooks/nlp_bc5cdr_ner.ipynb` (cells 5/8/14/15) plus this file.
-- **Global rules**: no commits, no force-pushes, no co-author lines without explicit user instruction.
+- **Committed state**: notebook fix and this plan are committed on `main`. Commits: `fix: preserve BC5CDR entity type in NER notebook`, `docs: add research plan for entity-type preservation audit`. Not pushed.
+- **Global rules**: no force-pushes, no co-author lines, no push without explicit user instruction.
+
+---
+
+## 9. Audit log
+
+Accumulates concrete audit findings, per step. Append-only — do not delete old entries, update status in §6 instead.
+
+### 9.1 Pilot repo selection (2026-04-15)
+
+Searched GitHub via `gh api /search/repositories` with queries: `MIMIC+readmission` (30 results), `MIMIC+clinical+notes+NLP+readmission` (1), `ClinicalBERT+MIMIC` (~18), and related terms. Triaged ~50 candidates. Selected 5 for the pilot to maximise diversity of NER/NLP patterns.
+
+**Pilot set**:
+
+| # | Repo | ⭐ | Task | Hypothesised pattern | Why selected |
+|---|------|----|------|----------------------|--------------|
+| 1 | [JuhongPark/mimic-readmission-prediction](https://github.com/JuhongPark/mimic-readmission-prediction) | 0 | MIMIC-III 30-day ICU readmission | **P1** (type stripped at extraction — confirmed in §2) | Case study; the project that started this audit |
+| 2 | [TimFrenzel/MIMIC-III-Clinical-NLP](https://github.com/TimFrenzel/MIMIC-III-Clinical-NLP) | 0 | MIMIC-III clinical NLP (stroke + critical conditions) | unknown — description says "spaCy, SciSpacy, MedSpacy, ClinicalBERT to extract entities" | Explicitly uses multiple NER stacks; highest prior likelihood of a typed-entity pattern |
+| 3 | [yzhouas/MIMIC-III_ICU_Readmission_Analysis](https://github.com/yzhouas/MIMIC-III_ICU_Readmission_Analysis) | 27 | MIMIC-III ICU readmission (PLoS ONE paper) | unknown — predates current best practices | Lineage: this repo's README points to a fork (`JuhongPark/MIMIC-III_ICU_Readmission_Analysis`) of this codebase. Worth auditing the ancestor to see whether the pattern is inherited |
+| 4 | [NikhilMY/ClinicalMind---Patient-Risk-Predictor](https://github.com/NikhilMY/ClinicalMind---Patient-Risk-Predictor) | 0 | MIMIC-III 30-day ICU readmission (ClinicalBERT + structured EHR + SHAP) | **P4** candidate (full-text transformer; entity types sidestepped) | Modern ClinicalBERT fusion with SHAP — tests the hypothesis that transformer-based pipelines avoid the problem entirely |
+| 5 | [andrewwlong/mimic_bow](https://github.com/andrewwlong/mimic_bow) | 68 | MIMIC-III readmission from discharge summaries | **P4/P5** candidate (BOW — no NER at all) | Highest-star repo in the candidate pool; baseline for "traditional NLP without NER" |
+
+**Rationale for mix**: one confirmed P1 (case study), one explicit scispacy/medspacy stack (highest NER exposure), one lineage ancestor, two "transformer or BOW" alternatives that should *not* exhibit the pattern. The mix is designed so that if the pattern is real, 1–3 should show it while 4–5 should not. If 4 or 5 unexpectedly show the pattern, that is an even stronger finding.
+
+**Backlog** (not in pilot but retained for the full 15–25 repo audit if the pilot confirms the pattern):
+
+| Repo | ⭐ | Rationale |
+|------|----|-----------|
+| [YaronBlinder/MIMIC-III_readmission](https://github.com/YaronBlinder/MIMIC-III_readmission) | 91 | Highest-star MIMIC-III readmission repo; description generic, needs a closer look |
+| [apakbin/ICU72hReadmissionMIMICIII](https://github.com/apakbin/ICU72hReadmissionMIMICIII) | 28 | 72-hour variant, similar task |
+| [Sue-Hi/NLP-MIMIC-III](https://github.com/Sue-Hi/NLP-MIMIC-III) | 12 | Explicit NLP focus |
+| [mmrosek/MIMIC-ICU-Readmission-Prediction](https://github.com/mmrosek/MIMIC-ICU-Readmission-Prediction) | 7 | Notes + structured |
+| [SashankBharadwaj11/ClinicalBert-Mimic3-Mortality-Readmission-Prediction](https://github.com/SashankBharadwaj11/ClinicalBert-Mimic3-Mortality-Readmission-Prediction) | 0 | Second ClinicalBERT variant for triangulation |
+| [knaguib1/NLP-Hospital-Readmission-Prediction](https://github.com/knaguib1/NLP-Hospital-Readmission-Prediction) | 0 | ClinicalBERT on discharge notes |
+| [lokesh9899/Mortality-Risk-Readmission-Prediction-NLP-Clinical-Bert-LLM](https://github.com/lokesh9899/Mortality-Risk-Readmission-Prediction-NLP-Clinical-Bert-LLM) | 2 | ClinicalBERT + XGBoost fusion |
+| [altairBASIC/BDCC-reproduction](https://github.com/altairBASIC/BDCC-reproduction) | 1 | ICD prediction reproduction; not readmission but uses clinical NLP heavily |
+| [Kbmukumbi/diabetes-nlp-structured-extraction](https://github.com/Kbmukumbi/diabetes-nlp-structured-extraction) | 0 | Rich medication entity types (DOSE/ROUTE/FREQUENCY) — potential "P3 fully typed" positive example |
