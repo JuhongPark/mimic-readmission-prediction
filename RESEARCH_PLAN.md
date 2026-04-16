@@ -256,3 +256,49 @@ This is a more severe finding than originally thought. The source-side fix in co
 | P5 | NER runs, but its outputs are orphaned from the model's feature pipeline; a "bolt-on" that is never connected | JuhongPark (after accounting for the yzhouas inheritance — NER notebook outputs do not reach `features.py::disease_embedding`, which uses structured ICD-9) |
 
 This repo is thus a **P1 + P5 composite** — the worst of both worlds. TimFrenzel is a clean P2.
+
+### 9.3 Pilot audits: repos 4 and 5 + NikhilMY disposition (2026-04-15)
+
+**NikhilMY/ClinicalMind---Patient-Risk-Predictor** (original pilot pick #4): every source file in the repo is 0 bytes (`src/*.py`, `notebooks/*.ipynb`, `requirements.txt`, `README.md`). The impressive README description ("End-to-end clinical AI system predicting 30-day ICU readmission risk using ClinicalBERT + structured EHR fusion, SHAP explainability, interactive Plotly Dash dashboard") has no code behind it. **Classified as unauditable. Side finding to record in the paper: vaporware rate in the candidate query pool is non-zero.** Replaced with YaronBlinder/MIMIC-III_readmission (91 ⭐, highest-starred candidate).
+
+**Repo 4 (replacement) — YaronBlinder/MIMIC-III_readmission** (Udacity ML Nanodegree capstone, 91 ⭐)
+
+| Checklist | Finding |
+|-----------|---------|
+| NER model | **None.** Pipeline: PostgreSQL materialized view → pandas → feature engineering → XGBoost |
+| Preserve `ent.label_`? | N/A |
+| Pooled untyped? | N/A |
+| Uses structured ICD-9? | No. Uses min/max/mean aggregates of labevents (urea_N, platelets, magnesium, albumin, calcium) and chartevents (RespRate, Glucose, HR, SysBP, DiasBP, Temp) via `all_data.sql`. No diagnoses, no notes |
+| Ablation analysis | XGBoost feature importance only |
+| Claim-vs-code | Consistent — README promises XGBoost on structured features, delivers that |
+| Feature dim / plug-in | ~40 numerical features → XGBoost |
+
+**Pattern**: **P4 — no NER at all.** The highest-starred MIMIC-III readmission repo in the candidate pool demonstrates that the dominant well-visible approach is structured-only, predating the NLP-fusion trend.
+
+**Repo 5 — andrewwlong/mimic_bow** (68 ⭐)
+
+| Checklist | Finding |
+|-----------|---------|
+| NER model | **None.** `CountVectorizer` (BOW) + `LogisticRegression(C=0.0001, penalty='l2')` |
+| Preserve `ent.label_`? | N/A — no entity extraction |
+| Pooled untyped? | All text collapsed to an untyped sparse term-frequency matrix |
+| Uses structured ICD-9? | No — discharge summary text only |
+| Ablation analysis | Hyperparameter tuning, no modality ablation |
+| Claim-vs-code | Consistent with README ("BOW from discharge summaries") |
+| Feature dim / plug-in | Sparse BOW → LogisticRegression |
+
+**Pattern**: **P4 — no NER at all.** Second-highest-starred repo. Sanity-check bonus: swept `knaguib1/NLP-Hospital-Readmission-Prediction` (Spark-NLP for Healthcare, John Snow Labs) while replacing NikhilMY — uses `WordEmbeddingsModel.pretrained("embeddings_clinical")` but no `NerDLModel`/`NerConverter`. Word-level embeddings only, not entity extraction. Also **P4**.
+
+**Pilot tally (5 repos)**:
+
+| # | Repo | Pattern | Key evidence |
+|---|------|---------|--------------|
+| 1 | JuhongPark/mimic-readmission-prediction | **P1 + P5 composite** | Original cell 5 stripped `ent.label_`; 300-d "disease embedding" is inherited ICD-9 path from yzhouas, NER notebook orphaned |
+| 2 | TimFrenzel/MIMIC-III-Clinical-NLP | **P2** | `(ent.text, ent.label_)` captured then `for token, _ in ents` discards label at word2vec training (line 466) |
+| 3 | yzhouas/MIMIC-III_ICU_Readmission_Analysis | **P4** | No NER. **Direct ancestor of repo 1**, source of its structured-ICD-9 "disease embedding" |
+| 4 | YaronBlinder/MIMIC-III_readmission | **P4** | Pure SQL → XGBoost on lab/chart/vital aggregates |
+| 5 | andrewwlong/mimic_bow | **P4** | BOW + logistic regression on discharge summaries |
+
+**Pilot verdict**: 3/5 are P4 (no NER). Of the 2/5 that do use biomedical NER, 100% (2/2) exhibit an entity-type preservation failure — one P1+P5 composite, one P2. Zero clean P3 examples found in the pilot.
+
+**Implication for the paper framing**: the multi-repo audit thesis holds but needs narrower scope — "in repos that use biomedical NER as a feature source, entity-type preservation failures are endemic". The P4 repos are evidence that the field is substituting full-text transformers for explicit NER, so the pattern is more *historically* material than currently endemic. Pair the audit with the systems-perspective surveys (§10) to balance the "what went wrong in the NER-era" diagnosis with "where integrated clinical AI is heading".
