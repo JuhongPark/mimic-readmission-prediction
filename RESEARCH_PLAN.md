@@ -147,7 +147,7 @@ Cluster repos into categories:
 | **§10 Systems-perspective surveys (primary goal)** | in progress — 4 surveys drafted in parallel |
 | §10.1 LLM clinical agents | **done** (drafted) |
 | §10.2 Clinical NER medication safety | **done** (drafted) |
-| §10.3 FHIR-native ML deployment | not started |
+| §10.3 FHIR-native ML deployment | **done** (drafted) |
 | §10.4 MLOps / FDA SaMD compliance | not started |
 | Draft paper | not started |
 
@@ -404,3 +404,40 @@ Proof-of-concept paper that:
 4. Reports how many of the known-inappropriate overrides from the literature are suppressed under the new ranking.
 
 Deliverable: short paper + reference implementation. **This angle is not data-free** — the retrospective simulation requires MIMIC-III access. Flag for "next step once `MIMIC_DATA_ROOT` is set". Venue: ML4H, AMIA Symposium short paper, JAMIA Open.
+
+### 10.3 FHIR-native ML deployment and CDSS standards
+
+**(a) Space overview.** FHIR (Fast Healthcare Interoperability Resources) is the dominant standard for health data exchange. **FHIR R5** (2024) added explicit support for AI/ML scenarios; CMS/ONC incentivise hospital adoption with Medicare reimbursement-linked requirements. A growing body of work packages ML predictions as FHIR `RiskAssessment` resources so they can be consumed by any FHIR-compliant EHR. But the practical gap between an academic ML model and a deployable FHIR microservice remains 6–12 months of data-wrangling and interface work per deployment.
+
+**(b) Representative literature (April 2026 search)**:
+- **"ML-Enabled Clinical Information Systems Using FHIR Standards: Scoping Review"** — PMC10468818 — 39 articles reviewed: 18 CDSS, 10 data mgmt/analytics, 11 APIs. Key finding: *"many intelligent systems lacked EHR interoperability and externally validated evidence of clinical efficacy."*
+- **"ML-Enhanced Architecture Model for Integrated and FHIR-Based Health Data"** — MDPI Information 16(12), 1054.
+- **FHIR-Former** (PMC12646377) — enhances clinical predictions by combining FHIR with LLMs.
+- **"Development of an Interoperable and Easily Transferable CDSS Deployment Platform"** — JMIR 2022 (`jmir.org/2022/7/e37928`).
+- **"State-of-the-Art FHIR-based Data Model and Structure Implementations: Systematic Scoping Review"** — PMC11472501.
+- **"Experience in Developing an FHIR Medical Data Management Platform"** — PMC6981801.
+- **"Using CDSS to bring predictive models to the glaucoma clinic"** — PMC7854795 — rare concrete deployment case study.
+- **2024 Year in Review: FHIR Milestones** — Itirra blog (`itirra.com/blog/2024-year-in-review-key-milestones-for-fhir-and-the-rise-of-itirra-a-new-force-in-health-tech/`).
+
+**(c) Gap analysis**:
+1. **No reference implementation for a MIMIC-III research model as a FHIR microservice.** Thousands of MIMIC-based ML papers exist; none publish an adapter that takes FHIR `Observation` + `Condition` + `MedicationRequest` inputs and returns a `RiskAssessment` output.
+2. **SHAP-to-FHIR mapping is unspecified.** There is no agreed resource for per-prediction attribution / feature importance. Papers that expose SHAP do so in ad-hoc JSON payloads, not a standard resource or extension.
+3. **Model versioning and provenance have no standard home.** FHIR resources have `meta.versionId` but ML model versions are usually tracked separately. The audit trail a `RiskAssessment` should embed (model version, training data window, calibration date, drift-monitoring status) has no conventional field.
+4. **Fairness annotations have no FHIR home.** If a model flags reduced confidence for a demographic subgroup, there is no standard place to put that flag in the output resource — a growing problem as FDA GMLP guidance (§10.4) increases transparency requirements.
+
+**(d) Connection to this repo**:
+- This repo's 4 modalities map almost directly to FHIR resources: timeseries → `Observation` (vitals/labs), ICD-9 → `Condition`, demographics → `Patient`, discharge notes → `DocumentReference`. A FHIR input adapter is a well-defined piece of work.
+- The LSTM-CNN's output + SHAP values + MC Dropout uncertainty (if added) form the natural payload for a `RiskAssessment` resource with custom extensions.
+- The multi-repo audit (§9) demonstrated that most research repos have ad-hoc feature formats and undocumented interfaces. A FHIR adapter is the concrete answer to "how do we make this deployable?".
+
+**(e) Candidate research angle**:
+
+> **"MIMIC-to-FHIR: a reference implementation for deploying research ML models as FHIR-native microservices"**
+
+A systems / engineering paper that:
+1. Defines a minimum FHIR profile for clinical prediction microservices — required input resources, `RiskAssessment` output extensions for SHAP attribution, model version, training-data window, fairness flags.
+2. Provides a reference implementation that wraps this repo's LSTM-CNN behind a FHIR API (FastAPI + `fhir.resources`).
+3. Validates the adapter on **Synthea / SyntheticMass** synthetic FHIR data (publicly available, no credentialed access required).
+4. Publishes the profile as a FHIR ImplementationGuide that other research groups can extend.
+
+Deliverable: engineering paper + reference code. **No MIMIC-III data required** — Synthea covers the validation scenario. Venue: JAMIA, JMIR Medical Informatics, HIMSS / AMIA systems track.
