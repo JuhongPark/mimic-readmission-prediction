@@ -148,7 +148,7 @@ Cluster repos into categories:
 | §10.1 LLM clinical agents | **done** (drafted) |
 | §10.2 Clinical NER medication safety | **done** (drafted) |
 | §10.3 FHIR-native ML deployment | **done** (drafted) |
-| §10.4 MLOps / FDA SaMD compliance | not started |
+| §10.4 MLOps / FDA SaMD compliance | **done** (drafted) |
 | Draft paper | not started |
 
 **Next action**: populate §10.1–§10.4 with literature findings from parallel WebSearch, one survey per commit.
@@ -441,3 +441,40 @@ A systems / engineering paper that:
 4. Publishes the profile as a FHIR ImplementationGuide that other research groups can extend.
 
 Deliverable: engineering paper + reference code. **No MIMIC-III data required** — Synthea covers the validation scenario. Venue: JAMIA, JMIR Medical Informatics, HIMSS / AMIA systems track.
+
+### 10.4 MLOps, GMLP, and the FDA SaMD compliance gap
+
+**(a) Space overview.** The FDA's **AI/ML SaMD (Software as a Medical Device) Action Plan** — proposed 2021, finalized December 2024 — established a Total Product Life Cycle (TPLC) regulatory approach for AI/ML medical devices. In January 2025 FDA published *"AI-Enabled Device Software Functions: Lifecycle Management and Marketing Submission Recommendations"*, making lifecycle expectations explicit for marketing submissions. The accompanying **Good Machine Learning Practice (GMLP)** guidance lists 10 guiding principles. **Predetermined Change Control Plans (PCCPs)** allow manufacturers to pre-specify permissible model modifications without re-submission. Transparency — public submission summaries, training-data descriptions, known failure modes — is required. This regulatory framework applies to any clinical ML model intended for deployment, yet the academic ML literature rarely addresses compliance head-on.
+
+**(b) Representative literature (April 2026 search)**:
+- **FDA** — *Artificial Intelligence in Software as a Medical Device* landing page (`fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-software-medical-device`).
+- **FDA** — *Good Machine Learning Practice for Medical Device Development: Guiding Principles* — the 10 GMLP principles.
+- **"ML-Enabled Medical Devices Authorized by the US FDA in 2024: Regulatory Characteristics, Predicate Lineage, and Transparency Reporting"** — PMC12730494.
+- **"US FDA Regulation of Clinical Software in the Era of AI and ML"** — Mayo Clinic Proceedings: Digital Health, 2025 (`mcpdigitalhealth.org/article/S2949-7612(25)00038-0/fulltext`).
+- **"FDA Expectations for AI/ML Model Training in SaMD (2025 guide)"** — rookqs.com practitioner guide.
+- **"A Complete Guide to the FDA's AI/ML Guidance for Medical Devices"** — ketryx.com.
+- **"How the FDA Reviews AI and Machine Learning Medical Devices: Complete 2025 Guide"** — complizen.ai.
+- Academic overview: PMC12264609 — "US FDA Regulation of Clinical Software in the Era of AI/ML".
+
+**(c) Gap analysis**:
+1. **GMLP compliance of published research repos is unmeasured.** No study systematically audits public MIMIC prediction repositories against the 10 GMLP principles. The §9 audit of 5 repos in this plan strongly suggests most would fail even basic items (training-data window undocumented, no bias audit, no versioning, no change-control plan, no monitoring).
+2. **PCCPs are never specified in research papers.** Research models are frozen artefacts — retrained ad hoc, without a documented permitted-change envelope. A "research-to-deployment readiness score" per repo could quantify this gap.
+3. **Transparency reporting is ad-hoc.** Published papers include different subsets of the FDA-required transparency information (intended use, architecture, training data, subgroup performance). A checklist audit would reveal how much is routinely missing.
+4. **Academic incentives misalign with GMLP.** Academic metrics (AUROC on a benchmark split) reward discrimination; GMLP rewards *safety* (documented failure modes, fairness, monitoring, change control). No bridging framework currently exists to translate academic models into GMLP-compliant artifacts.
+
+**(d) Connection to this repo**:
+- This repo is a concrete case study for gap (1): the §9 multi-repo audit methodology applies directly but with a *different* checklist (the 10 GMLP principles instead of the 5-pattern entity-type taxonomy). Same audit infrastructure, new scoring dimension.
+- The P1+P5 pattern this repo exhibits maps to multiple GMLP violations: Principle 3 (training data representative of intended patient population — unverified), Principle 8 (performance of the human-AI team — absent, no deployment), Principle 10 (monitoring in deployment — absent).
+- The FHIR adapter from §10.3 is a prerequisite for pursuing SaMD clearance of this specific model — §10.3 and §10.4 interlock as an "engineering + compliance" pair.
+
+**(e) Candidate research angle**:
+
+> **"GMLP compliance of public MIMIC prediction repositories: a retrospective audit against the FDA's 10 guiding principles"**
+
+An extension of the §9 multi-repo audit methodology with a different checklist:
+1. Curate 20–30 public MIMIC prediction repositories (readmission, mortality, sepsis, LOS) — reuse the §9 candidate pool plus targeted searches.
+2. Score each repo against the 10 GMLP principles on a tri-state scale (absent / partial / complete), using README, code, and paper evidence.
+3. Report per-principle compliance rates and aggregate a "deployment-readiness score" distribution across repos.
+4. Propose a one-page "GMLP minimum" checklist that research repos can adopt as a README supplement to close the largest gaps cheaply.
+
+Deliverable: audit paper + GMLP minimum checklist template. **Purely literature + code-audit based; no data required.** Strongly complementary with §9 — same method, different checklist; shares candidate-repo pool. Venue: npj Digital Medicine, JAMIA, ML4H methodology track.
