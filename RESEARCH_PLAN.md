@@ -145,7 +145,7 @@ Cluster repos into categories:
 | Audit checklist applied (§5.2) | **done** — 5/5 (§9.1, §9.2, §9.3); verdict in §9.3 |
 | Pattern classification (§5.3) | **done** — 5-category taxonomy (§9.2), finalized in §9.3 |
 | **§10 Systems-perspective surveys (primary goal)** | in progress — 4 surveys drafted in parallel |
-| §10.1 LLM clinical agents | not started |
+| §10.1 LLM clinical agents | **done** (drafted) |
 | §10.2 Clinical NER medication safety | not started |
 | §10.3 FHIR-native ML deployment | not started |
 | §10.4 MLOps / FDA SaMD compliance | not started |
@@ -327,3 +327,42 @@ Parallel literature surveys of research directions that move this repo's foundat
 - §10.4 MLOps, GMLP, and the FDA SaMD compliance gap
 
 Each survey follows the same template: **(a) space overview**, **(b) representative recent literature**, **(c) gap analysis**, **(d) connection to this repo's foundation**, **(e) candidate research angle**. Surveys are added in separate commits so that each can be tracked, refined, or rolled back independently.
+
+### 10.1 LLM clinical agents and multi-model orchestration
+
+**(a) Space overview.** A 2024–2026 wave of work treats the LLM not as the clinical predictor itself but as a **reasoner that orchestrates specialist ML components** (imaging models, genomics pipelines, EHR prediction heads, clinical NLP tools). Major vendors (Microsoft, OpenAI) and academic groups are building agent frameworks in which a general-purpose LLM decomposes a clinical question, calls the right specialist tool(s), and synthesises the results into a single clinician-facing view. The pattern is variously called "clinical copilot", "multi-agent CDSS", or "healthcare agent orchestrator".
+
+**(b) Representative literature (April 2026 search)**:
+- Microsoft's **Healthcare Agent Orchestrator** — Semantic Kernel-based multi-agent framework over imaging (DICOM), pathology (WSI), genomics, and structured EHR. Positioned as enterprise middleware for hospital AI integration.
+- **ClinicalAgents** (arxiv:2603.26182): multi-agent clinical decision making with a dual-memory architecture.
+- **"Enhancing Clinical Decision-Making: Integrating Multi-Agent Systems with Ethical AI Governance"** (arxiv:2504.03699v4) — argues that multi-agent CDSS needs an explicit governance layer.
+- **"Multiagent AI Systems in Health Care: Envisioning Next-Generation Intelligence"** (PMC12360800).
+- **"Multi-Agent LLM Orchestration Achieves Deterministic, High-Quality Decision Support"** (arxiv:2511.15755v2) — patterns for deterministic multi-agent execution, adaptable from incident-response to clinical.
+- **Penda Health + OpenAI clinical copilot** (2025) — production EHR-embedded real-time safety net running during every visit.
+- **"Integrating LLMs for enhanced predictive analytics in healthcare"** — npj Digital Medicine, 2026.
+- **"Developing next-generation cancer care management with multi-agent orchestration"** (Microsoft, May 2025) — modular multimodal agents over imaging, pathology, genomics, and notes.
+- **"LLM Agents for Biomedicine: A Comprehensive Review"** (MDPI Information 2025).
+- **AgenticHealthAI/Awesome-AI-Agents-for-Healthcare** (GitHub awesome list).
+
+**(c) Gap analysis**:
+1. **Legacy-model integration is under-explored.** Current orchestrators are built around modern foundation-model tools (CLIP-style image encoders, genomics-GPT, EHR-BERT). Legacy specialist models — a 2018 LSTM-CNN trained on MIMIC-III, for example — are not first-class tools, even though real hospitals have years of such models in production.
+2. **Tool-interface standards are missing.** Each orchestrator declares its own function-calling format. There is no consensus on how a prediction tool should expose (i) input schema, (ii) prediction + calibrated uncertainty, (iii) SHAP / XAI output, (iv) fairness flags, (v) provenance (model version, training data window). MCP (Model Context Protocol) is emerging as a general answer but no clinical-specific profile exists.
+3. **Explainability hand-off is ad-hoc.** Most multi-agent CDSS papers discuss "explainable results aligned with clinical expectations" but do not specify how the LLM consumes and renders per-prediction SHAP / counterfactual / uncertainty outputs from a specialist tool.
+4. **Regulatory framing is thin.** When an LLM orchestrator invokes an FDA-cleared SaMD as a tool, is the whole pipeline newly in scope for SaMD review? Unanswered in the literature as of April 2026.
+
+**(d) Connection to this repo**:
+- The existing LSTM-CNN + SHAP pipeline is exactly the kind of legacy specialist ML that gap (1) flags as under-served. It has a defined input schema, a checkpoint (once data is available), and SHAP output — everything an orchestrator would need to call it as a tool.
+- The typed-entity NER output (post-fix, §3) is another candidate tool — a "medication entity extraction" microservice the orchestrator can call on a new note, returning `disease_list` and `chemical_list` plus their 200-d embeddings.
+- The multi-repo audit (§9) showed that most research-era pipelines have unstable / under-documented interfaces → reinforces gap (2) from primary evidence.
+
+**(e) Candidate research angle**:
+
+> **"Wrapping legacy clinical ML models as tools for LLM orchestrators: an interface specification with a MIMIC-III readmission case study"**
+
+A short paper or position piece that:
+1. Proposes a minimal tool-interface specification for a clinical prediction microservice (FHIR-subset input → prediction + calibrated uncertainty + SHAP attribution + fairness flag + model version + training-data window).
+2. Demonstrates the spec by wrapping this repo's LSTM-CNN as a tool an LLM agent can call.
+3. Shows a small end-to-end example: an LLM agent, given a synthetic patient summary, calls (i) the readmission tool and (ii) the typed NER tool, then renders an integrated risk narrative with grounded citations to the tool outputs.
+4. Discusses the SaMD-scope question raised in gap (4).
+
+Deliverable: position paper + minimal reference code. No MIMIC data required if the example uses synthetic/toy input. Venue: ML4H system demo track, or npj Digital Medicine short report.
