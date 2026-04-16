@@ -146,7 +146,7 @@ Cluster repos into categories:
 | Pattern classification (§5.3) | **done** — 5-category taxonomy (§9.2), finalized in §9.3 |
 | **§10 Systems-perspective surveys (primary goal)** | in progress — 4 surveys drafted in parallel |
 | §10.1 LLM clinical agents | **done** (drafted) |
-| §10.2 Clinical NER medication safety | not started |
+| §10.2 Clinical NER medication safety | **done** (drafted) |
 | §10.3 FHIR-native ML deployment | not started |
 | §10.4 MLOps / FDA SaMD compliance | not started |
 | Draft paper | not started |
@@ -366,3 +366,41 @@ A short paper or position piece that:
 4. Discusses the SaMD-scope question raised in gap (4).
 
 Deliverable: position paper + minimal reference code. No MIMIC data required if the example uses synthetic/toy input. Venue: ML4H system demo track, or npj Digital Medicine short report.
+
+### 10.2 Clinical NER for medication safety and DDI alerting
+
+**(a) Space overview.** Clinical NER for medication extraction sits at the intersection of information-extraction research and clinical decision support (CDSS). The canonical task is adverse drug event (ADE) extraction from discharge summaries with rich entity types (DRUG, DOSAGE, ROUTE, FREQUENCY, DURATION, REASON, ADE). The **n2c2 2018 ADE & Medication Extraction shared task** put 505 MIMIC-III discharge summaries at the centre of this line of work. In parallel, operational CDSS research has documented a severe **alert-fatigue** problem: >90% of drug-drug interaction (DDI) alerts in deployed systems are overridden, and >50% of overrides are clinically inappropriate. The two literatures — extraction quality and alert utility — rarely cross.
+
+**(b) Representative literature (April 2026 search)**:
+- **n2c2 2018 ADE & Medication Extraction shared task** — 505 MIMIC-III discharge summaries with rich entity typing (Medication, Strength, Dosage, Duration, Frequency, Form, Route, Reason, ADE).
+- **"ADE and medication relation extraction in EHRs with ensemble deep learning"** — JAMIA 27(1), 2020 (`academic.oup.com/jamia/article/27/1/39/5544735`).
+- **"Extracting adverse drug events from clinical notes: a systematic review"** — JBI 151, 2024 (`sciencedirect.com/science/article/pii/S1532046424000212`) — 76 studies total, 8 LLM-based approaches, trend toward LLM-first pipelines.
+- **MultiADE** — multi-domain ADE benchmark (arxiv:2405.18015, 2024).
+- **"Knowledge-aware neural attentive joint modeling for drug-safety entity/relation extraction"** — JMIR Medical Informatics 2020.
+- **"Optimizing DDI Alerts Using a Multidimensional Approach"** — PMC6398362.
+- **"Improving the specificity of DDI alerts: can it be done?"** — PMC9218784.
+- **"Effect of electronic DDI alerts on patient and clinician outcomes: systematic review"** — PMC12451929. Key finding: *"no current evidence of a clinically important effect of DDI alerts on patient outcomes"*.
+- **"Overriding DDI alerts in CDSS: scoping review"** — AHRQ PSNet / ResearchGate 361144614.
+
+**(c) Gap analysis**:
+1. **Extraction quality and alert utility are studied separately.** The NLP community optimises F1 on ADE extraction benchmarks; the CDSS community measures override rates on legacy rule-based alerts. Nobody has connected "better-structured extraction → smarter alert prioritisation".
+2. **Patient-specific risk context is absent from alerts.** Current DDI alerts fire on drug combinations regardless of the individual patient's risk. A readmission or mortality risk score combined with a specific drug pair could in principle yield a personalised risk score; this has not been operationalised.
+3. **Typed entity outputs are not used at alert time.** Extraction pipelines produce rich typed outputs (DRUG, DOSAGE, ROUTE, REASON), but alert systems still match on drug-name strings only. The typing is discarded before reaching the alert rule engine — exactly the same methodological pattern this repo's multi-repo audit (§9) documents at training time.
+4. **Override-aware prioritisation is missing.** No published work trains an alert suppression model on override patterns using NLP-extracted medications as features.
+
+**(d) Connection to this repo**:
+- The typed BC5CDR output from the §3 fix provides exactly what gap (3) needs: `disease_list` + `chemical_list` columns with per-entity 200-d embeddings, preserving the type distinction that legacy pipelines discard at the NER→feature boundary.
+- The LSTM-CNN readmission risk score is exactly what gap (2) needs: a patient-specific risk variable that can condition alert prioritisation.
+- The methodological parallel with §9 is strong — the failure mode this paper would document (type-agnostic alert matching) is the *runtime* mirror of the *training-time* failure mode §9 documents.
+
+**(e) Candidate research angle**:
+
+> **"Patient-risk-conditioned DDI alert prioritisation from typed biomedical NER: a MIMIC-III retrospective simulation"**
+
+Proof-of-concept paper that:
+1. Uses typed BC5CDR output (from §3's fix) to extract medications from MIMIC-III discharge notes.
+2. For each (patient, drug-pair) that would trigger a DDI alert in a reference ruleset (DrugBank, RxNorm DDI), scores the patient's readmission risk with this repo's LSTM-CNN.
+3. Re-ranks alerts by `(rule severity × patient risk)` and compares the top-K under a plausible alert-capacity budget (e.g. 10 alerts per shift) against the unranked baseline.
+4. Reports how many of the known-inappropriate overrides from the literature are suppressed under the new ranking.
+
+Deliverable: short paper + reference implementation. **This angle is not data-free** — the retrospective simulation requires MIMIC-III access. Flag for "next step once `MIMIC_DATA_ROOT` is set". Venue: ML4H, AMIA Symposium short paper, JAMIA Open.
