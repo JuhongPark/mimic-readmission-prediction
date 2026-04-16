@@ -144,14 +144,15 @@ Cluster repos into categories:
 | Candidate repo collection (§5.1, pilot set) | **done** — 5 repos selected (§9.1) |
 | Audit checklist applied (§5.2) | **done** — 5/5 (§9.1, §9.2, §9.3); verdict in §9.3 |
 | Pattern classification (§5.3) | **done** — 5-category taxonomy (§9.2), finalized in §9.3 |
-| **§10 Systems-perspective surveys (primary goal)** | in progress — 4 surveys drafted in parallel |
+| **§10 Systems-perspective surveys (primary goal)** | **done** — 4 surveys + cross-cutting synthesis |
 | §10.1 LLM clinical agents | **done** (drafted) |
-| §10.2 Clinical NER medication safety | **done** (drafted) |
+| §10.2 Clinical NER medication safety | **done** (drafted, data-blocked) |
 | §10.3 FHIR-native ML deployment | **done** (drafted) |
-| §10.4 MLOps / FDA SaMD compliance | **done** (drafted) |
+| §10.4 MLOps / FDA SaMD compliance | **done** (drafted; recommended primary thread, see §10.5) |
+| §10.5 Cross-cutting synthesis | **done** |
 | Draft paper | not started |
 
-**Next action**: populate §10.1–§10.4 with literature findings from parallel WebSearch, one survey per commit.
+**Next action**: pilot §10.4 by extending the §9 candidate-repo pool (+10–15 MIMIC mortality/sepsis/LOS repos) and dry-running the FDA GMLP checklist on 3 repos to validate the scoring rubric.
 
 ---
 
@@ -478,3 +479,43 @@ An extension of the §9 multi-repo audit methodology with a different checklist:
 4. Propose a one-page "GMLP minimum" checklist that research repos can adopt as a README supplement to close the largest gaps cheaply.
 
 Deliverable: audit paper + GMLP minimum checklist template. **Purely literature + code-audit based; no data required.** Strongly complementary with §9 — same method, different checklist; shares candidate-repo pool. Venue: npj Digital Medicine, JAMIA, ML4H methodology track.
+
+### 10.5 Cross-cutting synthesis and next-step decision
+
+**How the four surveys interlock**:
+- §10.1 (LLM orchestration) and §10.3 (FHIR-native microservices) specify *how* a legacy research model plugs into a modern clinical AI stack. §10.3 is the concrete pipe; §10.1 is the consumer.
+- §10.2 (medication safety) and §10.1 (orchestration) describe a *specific use case*: the LLM orchestrator calls the readmission tool AND the typed-NER tool AND a DDI ruleset to produce a patient-personalised alert.
+- §10.4 (GMLP compliance) and §9 (entity-type audit) share the methodology: both are static audits of public repos. §10.4 extends the §9 audit pool and method to a new checklist.
+- §10.3 (FHIR) and §10.4 (GMLP) are the "engineering + compliance" pair: §10.3 is what you build; §10.4 is the checklist it must satisfy.
+
+**Data-free vs data-required**:
+
+| Survey | Data required? |
+|--------|---------------|
+| §10.1 LLM orchestrator | Synthetic only — **data-free** |
+| §10.2 Medication safety | **Requires MIMIC-III** for the retrospective simulation |
+| §10.3 FHIR microservice | Synthea synthetic FHIR — **data-free** |
+| §10.4 GMLP audit | Static code audit — **data-free** |
+
+Three of the four candidate threads can proceed without `MIMIC_DATA_ROOT`. Only §10.2 is blocked on data access.
+
+**Promotion-to-primary decision matrix**:
+
+| Criterion | §10.1 | §10.2 | §10.3 | §10.4 |
+|-----------|-------|-------|-------|-------|
+| Novelty of contribution | high (legacy-wrap) | high (risk × typed NER) | medium (MIMIC→FHIR ref impl) | medium-high (GMLP audit) |
+| Data-free | ✓ | ✗ | ✓ | ✓ |
+| Uses §3 fix directly | indirect | ✓✓ direct | indirect | no |
+| Uses §9 audit method directly | no | indirect | no | ✓✓ direct |
+| Paper size | short | short-medium | medium | medium |
+| Venue visibility | high | medium | medium | high |
+
+**Recommended primary thread**: **§10.4 (GMLP compliance audit)**. Rationale: (i) strictly data-free, (ii) directly extends §9 audit methodology already in place, (iii) maps to an explicit external regulatory framework (FDA GMLP) that provides a principled checklist instead of an invented one, (iv) reviewers cannot easily object to the absence of empirical performance results because the deliverable is a compliance audit, not a prediction claim, (v) audit-style work is well-received at npj Digital Medicine / JAMIA / ML4H methodology.
+
+**Recommended secondary thread**: **§10.1 (legacy-model wrapping for LLM orchestrators)** — a position paper plus minimal reference implementation using this repo's LSTM-CNN as the concrete case study; complementary to §10.4.
+
+**Deferred**: **§10.2** (needs MIMIC-III for the retrospective). The §3 NER fix is the precondition already in place; the experimental half waits on data access.
+
+**Possibly merge**: **§10.3** can be folded into §10.1 as the interface specification the position paper proposes, reducing the number of independent threads from four to two plus one deferred.
+
+**Next concrete action**: pilot §10.4 by extending the §9 candidate-repo pool (add 10–15 MIMIC mortality / sepsis / LOS repos) and dry-run the GMLP checklist on 3 of them to verify the scoring rubric is tractable. If the pilot shows clean score separation, promote §10.4 to full execution.
