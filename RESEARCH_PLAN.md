@@ -4,11 +4,17 @@
 
 ---
 
-## 1. Thesis
+## 1. Research goal
 
-Published clinical prediction pipelines that use biomedical NER (e.g. BC5CDR) routinely discard entity type at the extraction step, silently losing medication-vs-disease signal. This repo is an instance of a broader, unaudited pattern. A literature-only multi-repo audit can document the pattern, measure its prevalence in public MIMIC prediction projects, and propose a standard — without new experiments or MIMIC data access.
+This repo is being developed into a research-focused investigation of **integrated clinical AI systems**: how specialist ML models (starting from the 30-day readmission LSTM-CNN this project began with) plug into broader hospital AI systems — LLM orchestrators, FHIR-native deployment, medication-safety agents, compliance frameworks.
 
-**Target venue**: ML4H, Clinical NLP Workshop (ACL), or AMIA Informatics Summit short paper.
+**Two intertwined threads**:
+1. **Diagnostic** (§2–§9): what is wrong with current research-grade clinical ML pipelines that blocks hospital integration? Source of evidence is the NER audit + multi-repo pilot.
+2. **Prospective** (§10): where is the field moving, and what research angles exist to bridge the gap? Source of evidence is parallel literature surveys of systems-perspective research directions.
+
+The primary short-term deliverable is the **parallel systems-perspective survey in §10**, with the diagnostic work (§2–§9) providing motivating evidence. Each §10 subsection is a standalone literature review + gap analysis + proposed angle that can be promoted to a full research thread, combined with another, or used as background for the primary paper.
+
+**Target venues**: ML4H, Clinical NLP Workshop (ACL), AMIA Informatics Summit, npj Digital Medicine — venue selection depends on which survey direction is promoted to the primary contribution.
 
 ---
 
@@ -136,11 +142,16 @@ Cluster repos into categories:
 | Source-side fix to notebook (§3) | done (cells 5/8/14/15 edited, committed, not re-run) |
 | Literature review (§4) | done |
 | Candidate repo collection (§5.1, pilot set) | **done** — 5 repos selected (§9.1) |
-| Audit checklist applied (§5.2) | 3/5 done — this repo (§2), TimFrenzel (§9.2), yzhouas (§9.2) |
-| Pattern classification (§5.3) | draft taxonomy (§9.2), pending 2 more audits |
+| Audit checklist applied (§5.2) | **done** — 5/5 (§9.1, §9.2, §9.3); verdict in §9.3 |
+| Pattern classification (§5.3) | **done** — 5-category taxonomy (§9.2), finalized in §9.3 |
+| **§10 Systems-perspective surveys (primary goal)** | in progress — 4 surveys drafted in parallel |
+| §10.1 LLM clinical agents | not started |
+| §10.2 Clinical NER medication safety | not started |
+| §10.3 FHIR-native ML deployment | not started |
+| §10.4 MLOps / FDA SaMD compliance | not started |
 | Draft paper | not started |
 
-**Next action**: audit pilot repo #4 (NikhilMY/ClinicalMind — ClinicalBERT fusion) and #5 (andrewwlong/mimic_bow — BOW baseline).
+**Next action**: populate §10.1–§10.4 with literature findings from parallel WebSearch, one survey per commit.
 
 ---
 
@@ -302,3 +313,17 @@ This repo is thus a **P1 + P5 composite** — the worst of both worlds. TimFrenz
 **Pilot verdict**: 3/5 are P4 (no NER). Of the 2/5 that do use biomedical NER, 100% (2/2) exhibit an entity-type preservation failure — one P1+P5 composite, one P2. Zero clean P3 examples found in the pilot.
 
 **Implication for the paper framing**: the multi-repo audit thesis holds but needs narrower scope — "in repos that use biomedical NER as a feature source, entity-type preservation failures are endemic". The P4 repos are evidence that the field is substituting full-text transformers for explicit NER, so the pattern is more *historically* material than currently endemic. Pair the audit with the systems-perspective surveys (§10) to balance the "what went wrong in the NER-era" diagnosis with "where integrated clinical AI is heading".
+
+---
+
+## 10. Systems-perspective research surveys
+
+Parallel literature surveys of research directions that move this repo's foundations (NER audit + LSTM-CNN readmission model + SHAP explainability + typed entity extraction post-fix) toward a hospital-deployable integrated AI system. Each subsection is a standalone literature review + gap analysis + proposed angle that connects to this repo's assets. Surveys can be promoted to full research threads, combined with each other, or used as background material for the primary paper.
+
+**Survey slate**:
+- §10.1 LLM clinical agents and multi-model orchestration
+- §10.2 Clinical NER for medication safety and DDI alerting
+- §10.3 FHIR-native ML deployment and CDSS standards
+- §10.4 MLOps, GMLP, and the FDA SaMD compliance gap
+
+Each survey follows the same template: **(a) space overview**, **(b) representative recent literature**, **(c) gap analysis**, **(d) connection to this repo's foundation**, **(e) candidate research angle**. Surveys are added in separate commits so that each can be tracked, refined, or rolled back independently.
