@@ -148,11 +148,16 @@ Cluster repos into categories:
 | §10.1 LLM clinical agents | **done** (drafted) |
 | §10.2 Clinical NER medication safety | **done** (drafted, data-blocked) |
 | §10.3 FHIR-native ML deployment | **done** (drafted) |
-| §10.4 MLOps / FDA SaMD compliance | **done** (drafted; recommended primary thread, see §10.5) |
+| §10.4 MLOps / FDA SaMD compliance | **done** (drafted; see §11.4 for revised thread recommendation) |
 | §10.5 Cross-cutting synthesis | **done** |
+| **§11 Hospital system × medication design focus** | **done** — 2-axis deep dive + integrated architecture |
+| §11.1 Hospital system design deep dive | **done** (2026-04-21) |
+| §11.2 Medication design deep dive | **done** (2026-04-21) |
+| §11.3 Integrated architecture proposal | **done** (2026-04-21) |
+| §11.4 Revised primary/secondary threads | **done** — supersedes §10.5 |
 | Draft paper | not started |
 
-**Next action**: pilot §10.4 by extending the §9 candidate-repo pool (+10–15 MIMIC mortality/sepsis/LOS repos) and dry-running the FDA GMLP checklist on 3 repos to validate the scoring rubric.
+**Next action**: execute §11.5 step 1 — scaffold the CDS Hooks service stub (`/cds-services` + `patient-view` endpoint) as the concrete first artifact toward the §11.1(e) reference integration architecture. Run §10.4 GMLP pilot in parallel (see §11.4 secondary combo).
 
 ---
 
@@ -519,3 +524,165 @@ Three of the four candidate threads can proceed without `MIMIC_DATA_ROOT`. Only 
 **Possibly merge**: **§10.3** can be folded into §10.1 as the interface specification the position paper proposes, reducing the number of independent threads from four to two plus one deferred.
 
 **Next concrete action**: pilot §10.4 by extending the §9 candidate-repo pool (add 10–15 MIMIC mortality / sepsis / LOS repos) and dry-run the GMLP checklist on 3 of them to verify the scoring rubric is tractable. If the pilot shows clean score separation, promote §10.4 to full execution.
+
+---
+
+## 11. Hospital system design × medication design focus (2026-04-21)
+
+A focused research direction targeting the two axes that most directly translate this repo's assets (LSTM-CNN readmission predictor + typed BC5CDR NER after the §3 fix + SHAP explainability) into deployable hospital artifacts: **(i) hospital system integration design** and **(ii) medication decision-support design**. This section deepens §10.1 (LLM orchestration) + §10.3 (FHIR deployment) on the system side and §10.2 (DDI alerting) on the medication side with 2024–2026 literature not previously cited, then proposes a unified integration architecture and revises the primary-thread recommendation (§11.4 supersedes §10.5).
+
+### 11.1 Hospital system design — deep dive
+
+**(a) The 2026 integration stack.** Four interlocking standards now define production-grade hospital AI integration. (1) **SMART on FHIR** (OAuth2 + FHIR API + app launch). 100 % of ONC-certified EHRs expose SMART endpoints; 90–95 % of U.S. hospitals reported a functional SMART endpoint by 2023. (2) **CDS Hooks** (JSON CDS-service invocations at workflow events — `patient-view`, `order-select`, `order-sign`, `medication-prescribe`). A cluster-randomized trial (Dziadkowiec et al. *JAMIA* 2022, PMC9382378) showed CDS Hooks prompts *increase* SMART on FHIR app utilization — the two are complements, not competitors. (3) **FHIR versions**. Epic and Oracle Health (Cerner) both require FHIR R4 + SMART on FHIR 2.1 (DSTU2 deprecated by Cerner Dec 2025); industry uptake of R5 is still low but the **R5 Subscription Backport IG** lets R4 systems consume R5 topic-based subscriptions without a full version migration; R6 is expected late 2026 with most clinical/admin resources going normative. (4) **Model Context Protocol (MCP)** and its healthcare extension **HMCP** (Innovaccer, 2025) — the emerging standard for LLM tool access to FHIR data and clinical workflows. Open-source MCP–FHIR servers (WSO2, AgentCare, Momentum, the arXiv:2506.13800 reference framework) all appeared in 2025.
+
+**(b) Representative literature (2024–2026)**:
+- Dziadkowiec et al. *Using CDS Hooks to increase SMART on FHIR app utilization: a cluster-randomized trial*, JAMIA 2022 (PMC9382378).
+- *AI Integration in Clinical Decision Support Systems Enhancing Patient Outcomes through SMART on FHIR and CDS Hooks* (ResearchGate 384042934, 2024).
+- *Development of SMART on FHIR Interoperable CDS for ED Patients with Pneumonia and Pilot Deployment into Novel Epic EHR Environments* (AHRQ Digital Healthcare Research, 2024) — rare concrete multi-vendor deployment case.
+- *Enhancing Clinical Decision Support and EHR Insights through LLMs and the Model Context Protocol* (arXiv:2506.13800, 2025) — open-source MCP+FHIR+LLM agent framework.
+- *Artificial Intelligence Platform Architecture for Hospital Systems: Systematic Review*, JMIR 2025 e79788 (PMC12710730) — 5-layer model (infrastructure / data / algorithm / application / security-compliance) synthesizing HIMSS digital-health, WHO-HIS, sociotechnical, NIST BDRA frameworks.
+- *Designing a System Integration Architecture for an ML-Based CDSS in the Emergency Department* (ScienceDirect 2025, S1062737525000484).
+- *Designing Clinical Decision Support Systems (CDSS) — Review*, JMIR 2025 e63733 — data quality + temporal dependency + dynamic risk flagged as systemic CDSS failure modes.
+- *Privacy-Preserving Clinical Decision Support for Emergency Triage Using LLMs* (MDPI 2076-3417/15/15/8412, 2025).
+- HL7 — *R5 Subscriptions Backport IG v1.2.0-ballot* (`build.fhir.org/ig/HL7/fhir-subscription-backport-ig/`).
+- Innovaccer — *Healthcare Model Context Protocol (HMCP)* spec (`github.com/innovaccer/Healthcare-MCP`).
+- FDA & EMA — *Guiding Principles of Good AI Practice in Drug Development*, Jan 14 2026 — 10 joint principles across nonclinical / clinical / post-market / manufacturing. Complements FDA GMLP (§10.4) on the *drug* side.
+
+**(c) Gap analysis (hospital systems)**:
+1. **No reference implementation for a research-grade MIMIC model (e.g. a 2018-era LSTM-CNN) wrapped as a CDS Hooks service.** Published CDS Hooks examples use rule-based or greenfield-ML logic; legacy ML is unrepresented.
+2. **No published HMCP / MCP tool manifest for a readmission-risk model.** The tool-interface gap §10.1 flagged is still open with no clinical-ML reference.
+3. **5-layer CDSS architectures assume new ML.** The JMIR 2025 systematic review (PMC12710730) describes the blueprint but ships no legacy-ML integration example — template, not reference implementation.
+4. **Epic / Oracle vendor integration is still bespoke.** Even with SMART on FHIR 2.1 + CDS Hooks, each vendor's auth, App Orchard / Oracle Health marketplace, and UI embedding path differs. "Standards-only" deployment narratives understate the vendor-specific work.
+5. **Audit trail across the stack is not standardized.** Per-prediction provenance (model version, training-data window, calibration epoch, drift monitor status, fairness flag) has no standard FHIR home — mirrors §10.3 gaps but now across CDS Hooks responses *and* MCP tool results.
+
+**(d) Connection to this repo**:
+- The LSTM-CNN + SHAP + typed NER stack maps cleanly to a CDS Hooks `patient-view` service (readmission risk card at chart open) and a `medication-prescribe` service (risk-conditioned alert).
+- 4 modalities → FHIR R4 resources: timeseries → `Observation`; ICD-9 → `Condition`; demographics → `Patient`; discharge note → `DocumentReference`.
+- The typed BC5CDR output from the §3 fix is the input for a `medication-prescribe` hook's CHEMICAL channel; DISEASE channel cross-checks `Condition`.
+- The multi-repo audit (§9) documented ad-hoc feature interfaces that make deployment bespoke per repo — motivates a standardized reference implementation.
+
+**(e) Candidate research angle (hospital systems)**:
+
+> **"A reference integration architecture for legacy clinical ML: wrapping a MIMIC-trained LSTM-CNN as a CDS Hooks service, a SMART on FHIR app, and an HMCP tool"**
+
+Engineering + position paper that:
+1. Defines a *minimum viable integration profile* (MVIP) covering (i) SMART on FHIR launch context, (ii) CDS Hooks service manifest + card format for risk prediction + SHAP attribution, (iii) HMCP tool manifest for MCP-based LLM orchestrators, (iv) `RiskAssessment` output FHIR profile with standard extensions for model version, training-data window, calibration epoch, fairness flag, uncertainty.
+2. Publishes a reference implementation wrapping this repo's LSTM-CNN (weights optional; spec can be demonstrated with a dummy checkpoint).
+3. Validates on Synthea / SyntheticMass synthetic FHIR data (no MIMIC-III required).
+4. Discusses the regulatory implications — at what point does the wrapped legacy model become in-scope for FDA SaMD review?
+
+Deliverables: spec + reference repo + position paper. Venue: JAMIA / JMIR Medical Informatics / ML4H systems demo track.
+
+### 11.2 Medication design — deep dive
+
+**(a) Space overview — the medication-safety stack.** Medication-related harms and readmissions are a first-class hospital problem. A 2021 systematic review (Uitvlugt et al., *Front. Pharmacol.* PMC8077030) pegs **drug-related readmissions at ~9 % pooled prevalence** among adult hospital admissions, with **15.4–22.2 % classified as preventable**; in one cohort study, **16 % of readmissions were medication-related and 40 % of those preventable**, decomposed as 35 % prescribing errors + 35 % non-adherence + 30 % transition errors. High-risk drug classes: anticoagulants, antibiotics, psychotropics, chemotherapy. Polypharmacy (≥ 5 meds) is a dominant risk modifier. This sits at the center of several parallel medication-CDSS tracks — CPOE, DDI alerting, medication reconciliation, pharmacogenomics (PGx), and closed-loop administration — each of which has matured independently and which no prior work unifies under a single outcome-risk-conditioned prioritization.
+
+**(b) Representative literature (2024–2026)**:
+
+*CPOE & ML-augmented prescribing*:
+- *Implementation of CPOE Systems: Impacts, Barriers, Facilitators — Review*, 2024 (PMC11536519).
+- *International transferability of ML models for detecting medication errors in general internal medicine* (2025) — generalization is limited across sites.
+
+*DDI alert fatigue mitigation*:
+- *The potential for leveraging ML to filter medication alerts* (PMC9006688) — LightGBM achieves 0.192 precision at 0.99 sensitivity → **54.1 % alert-volume reduction**.
+- *ML-based DDI prediction: critical review of models, limitations, data challenges*, Front. Pharmacol. 2025 (PMC12344460).
+- *AI-powered DDI prediction, vulnerable populations, regulatory insights*, Front. Pharmacol. 2025 (PMC12380558).
+- *Closing the loop: human-augmented, mechanistically enhanced AI for proactive DDI management*, Front. Pharmacol. 2026 (fphar.2026.1767646).
+- *A comprehensive landscape of AI applications in broad-spectrum drug interaction prediction: systematic review of 147 studies (2018–2024)*, J. Cheminformatics 2025 (s13321-025-01093-2).
+- *ML for predicting drug-drug interactions: Graph neural networks and beyond*, 2025 (S2452310025000113).
+
+*Medication reconciliation*:
+- *Analytical approaches for medication reconciliation-related topics: a scoping review* (medRxiv 2025.03.16.25324060) — first scoping review of analytics methods in med reconciliation.
+- RCT: *Effectiveness of digital platform in reducing unintentional medication discrepancies* — 18.8 % → 3.4 % (PMC12219133, 2025).
+- *Medication Reconciliation at Transition of Care in a Geriatric Primary Care Setting* (PubMed 40296246, 2025) — pharmacist-led: 5.5 discrepancies / patient; 30.3 % require pre-visit intervention.
+
+*Pharmacogenomics CDSS*:
+- Caudle et al. *Advancing Clinical Pharmacogenomics Worldwide Through CPIC*, *Clin. Pharmacol. Ther.* 2025 (PubMed 40678821). 28 active guidelines, 34 genes, 164 drugs, 128 institutions, 40 commercial labs; CPIC API ~80 K monthly queries.
+- Hinderer et al. *A Pharmacogenomics CDS Service Based on FHIR and CDS Hooks* (PubMed 30605914) — canonical FHIR+CDS-Hooks PGx pattern.
+- Brown et al. *Impact of PGx on P&T Committee Formulary Management*, *JACCP* 2025 (jac5.2057).
+- Epic foundational genomics module + CDS Hooks delivery of CPIC content.
+
+*Closed-loop medication administration*:
+- Sorensen et al. *Evaluating the Impact of Smart Infusion Pump Interoperability on Reducing Medication Administration Errors: Systematic Literature Review*, 2025 (PMC12009041) — 87.9 % U.S. hospitals have smart pumps; only **9–15 % have pump-EHR interoperability**; autoprogramming: high-alert drug errors 84 % → 16 %; keystroke reduction 86 %.
+- *Maximizing the impact of smart-pump-EHR interoperability in critical care*, 2024 (S0964339724001940).
+- *Closed-Loop Medication Management with EHR in U.S. and Finnish Hospitals* (PMC10488169).
+- ISMP Guideline 6.6 — bidirectional SMART pump-EHR interoperability.
+
+*Drug-related readmission epidemiology (cross-cutting)*:
+- Uitvlugt et al. *Medication-Related Hospital Readmissions Within 30 Days of Discharge* (PMC8077030, 2021).
+- *Prevalence of and Risk Factors for Drug-Related Readmissions in Older Adults: Systematic Review & Meta-Analysis* (PMC10770220, 2023) — 9 % pooled prevalence.
+- *Potentially inappropriate medications at discharge: prevalence, predictors, association with early readmission and ED visits in older adults* (PMC12342278, 2025).
+
+*Regulatory*:
+- FDA / EMA *Guiding Principles of Good AI Practice in Drug Development*, Jan 14 2026 — 10 principles across nonclinical / clinical / post-market / manufacturing; complements FDA GMLP (§10.4) on the *drug* rather than *device* side.
+
+**(c) Gap analysis (medication design)**:
+1. **ML-DDI filtering is not personalized by outcome risk.** LightGBM reduces alert volume ~54 % at 0.99 sensitivity by learning *override patterns* — but the patient's own readmission / mortality / LOS risk is not part of the prioritization feature set. An alert clinically inconsequential for a low-risk patient may be actionable for a high-risk patient; current filters do not distinguish.
+2. **Medication reconciliation tools are not prioritized by readmission risk.** A pharmacist with a fixed queue capacity and 5.5 discrepancies / patient would benefit from a risk-ordered queue; no published tool incorporates an LSTM / CNN risk score.
+3. **PGx CDSS does not cross-condition with outcome models.** CPIC guidelines specify gene/drug actionability but do not fire differentially by patient outcome risk — a high-readmission-risk patient on a CPIC-level-A drug warrants a stronger alert than a low-risk patient on the same drug.
+4. **Closed-loop medication administration has a 75 %+ implementation gap.** 87.9 % of U.S. hospitals have smart pumps but only 9–15 % have bidirectional pump-EHR interoperability. This is the single largest deployment gap in the medication-safety stack and the natural "last mile" for CDSS actions.
+5. **Readmission ML systems treat readmission as a unitary outcome.** 9–16 % of readmissions are medication-related and 15–40 % of those preventable — a causally decomposable subcategory — yet readmission-prediction papers (this repo included) predict a single binary target and do not model the medication-mediated sub-outcome separately. A medication-mediated readmission sub-head is a concrete modeling extension.
+
+**(d) Connection to this repo**:
+- The LSTM-CNN readmission score is the conditioning variable gaps (1–3) need — a patient-level outcome risk available at the moment of DDI alert firing, reconciliation queuing, or PGx lookup.
+- The typed BC5CDR output (post-§3 fix) is the medication-entity feature gap (1) needs for patient-specific DDI prioritization — it turns a drug-pair match against a static ruleset into a drug-pair match *weighted by per-patient extraction quality and typed coverage*.
+- The SHAP attribution is the explanation layer gap (3) needs — when alerting a high-risk patient on a CPIC-actionable drug, SHAP tells the clinician *why* this patient is high-risk in a way that complements the CPIC recommendation.
+- The §9 lineage finding (ICD-9 disease path inherited from yzhouas, NER orphaned) maps cleanly onto a medication-design gap: the NER CHEMICAL channel has never been wired to an alert pathway in this repo; §11.2 identifies exactly where that wiring should go.
+
+**(e) Candidate research angle (medication design)**:
+
+> **"Outcome-risk-conditioned medication safety: a unified prioritization framework for DDI alerts, reconciliation queues, and PGx recommendations, with a MIMIC-III retrospective simulation"**
+
+Extends §10.2 across the full medication-safety stack rather than DDI alone:
+1. Define a generalized prioritization function `priority(i) = f(static_severity_i, outcome_risk, medication_risk_class, PGx_actionability)` applicable to DDI alerts, reconciliation discrepancies, and PGx recommendations — a *single* prioritization model rather than three separate alert rankers.
+2. Use the LSTM-CNN readmission score as the `outcome_risk` signal; use the typed BC5CDR output for drug/disease grounding; use CPIC annotations for PGx actionability.
+3. Retrospectively simulate on MIMIC-III:
+   - DDI alerts: match typed CHEMICAL list against DrugBank / RxNorm DDI ruleset; compute priority.
+   - Reconciliation queue: simulate discharge-day queue re-ranking.
+   - PGx: simulate CPIC-level-A drug exposure × outcome risk.
+4. Report: alert-budget capacity curves (10 / shift, 20 / shift, …); percentage of known-inappropriate overrides (from literature) suppressed; re-identified medication-mediated readmission cases.
+5. **Data-required**: needs `MIMIC_DATA_ROOT`. Blocked until data access; §3 typed NER is the precondition already in place.
+
+Deliverable: paper + reference implementation. Venue: ML4H, AMIA Informatics Summit, JAMIA Open.
+
+### 11.3 Integrated architecture — hospital system × medication design
+
+The two axes couple through the *medication-mediated readmission causal pathway*: 9–16 % of all readmissions are drug-related and 15–40 % of those preventable. A hospital AI stack that (i) predicts readmission risk (system side) and (ii) intervenes in medication safety (medication side) but does not couple them leaves this causal fraction un-targeted. A stack that couples them — the readmission score conditions the medication-safety triage — targets the preventable fraction explicitly.
+
+**Proposed reference architecture** (mapped to the 5-layer CDSS model from §11.1):
+
+| Layer | Component | Role |
+|:------|:----------|:-----|
+| 1 Infrastructure | FHIR R4 server (Epic / Oracle / HAPI) + R5 Subscription Backport | Data substrate + real-time event stream |
+| 2 Data | `Patient`, `Observation`, `Condition`, `MedicationRequest`, `MedicationAdministration`, `DocumentReference` | EHR native |
+| 3 Algorithm | (a) LSTM-CNN readmission predictor (this repo); (b) typed BC5CDR NER microservice (this repo + §3 fix); (c) LightGBM DDI-alert filter; (d) CPIC PGx lookup; (e) drift / calibration monitors | Intelligence |
+| 4 Application | CDS Hooks services: `patient-view` → risk card; `medication-prescribe` → outcome-risk-conditioned DDI + PGx alert; SMART on FHIR dashboard; HMCP tool endpoints consumed by an LLM clinical copilot | Workflow integration |
+| 5 Security / compliance | SMART auth (OAuth2 + SMART scopes); per-prediction audit on `RiskAssessment`; GMLP (§10.4) for the predictor; FDA / EMA 2026 drug-AI principles for any AI-assisted medication decisions | Governance |
+
+The LSTM-CNN readmission score is the *cross-layer bridging signal*: it lives in layer 3 (prediction), returns via layer 4 (`patient-view` card), re-enters layer 3 as a conditioning input to the DDI filter and PGx triage, then returns again via a second layer-4 surface (`medication-prescribe` hook). Closed-loop execution extends into medication administration where smart-pump interoperability exists (the 9–15 % of hospitals in §11.2(b)).
+
+### 11.4 Primary & secondary thread recommendations (supersedes §10.5)
+
+| Thread | Data-free? | Uses §3 fix? | Uses §9 method? | Paper size | Priority |
+|:-------|:-----------|:-------------|:----------------|:-----------|:---------|
+| **§11.1(e)** Reference integration architecture | ✓ Synthea | indirect | no | medium | **primary** |
+| §11.2(e) Outcome-risk-conditioned medication safety | ✗ MIMIC | ✓ direct | no | short-medium | deferred (data-blocked) |
+| §10.4 GMLP compliance audit | ✓ | no | ✓ direct | medium | **secondary** |
+| §11.3 Integrated architecture position | ✓ | ✓ indirect | indirect | short | **secondary** |
+
+**Recommended primary**: **§11.1(e) — reference integration architecture**.
+Rationale: (i) data-free via Synthea; (ii) directly exercises the two assets in this repo that the existing §10 plan flagged as under-used (the LSTM-CNN + the post-fix typed NER); (iii) fills a concrete gap (no published HMCP tool manifest for a legacy clinical ML model) with a minimal-footprint artifact reviewers can replicate; (iv) complementary with §10.4 — the GMLP audit becomes much sharper when a concrete reference architecture exists as the compliance target; (v) shorter to produce than a full retrospective simulation and not blocked on MIMIC-III access.
+
+**Recommended secondary combo**:
+1. **§10.4 GMLP compliance audit** as the methodology paper (static audit, different checklist, shared candidate pool with §9).
+2. **§11.3 integrated-architecture position piece** as the vision / roadmap paper tying the two axes together.
+
+**Deferred**: **§11.2(e) outcome-risk-conditioned medication safety** — requires MIMIC-III access.
+
+### 11.5 Next concrete actions
+
+1. **CDS Hooks service stub** — scaffold a FastAPI service exposing `/cds-services` + `patient-view` that accepts a FHIR Prefetch bundle and returns a Card with a dummy readmission prediction + SHAP top-5 features. No real model weights required for the interface paper.
+2. **FHIR input adapter** — write a mapping from the repo's 4 modalities to FHIR R4 resources and a small Synthea-to-model input converter. This is the concrete deliverable the §10.3 FHIR angle stopped at "to be written."
+3. **HMCP tool manifest** — draft a JSON manifest describing the readmission tool and the typed-NER tool for consumption by an MCP-speaking LLM orchestrator. Compare against the Innovaccer HMCP spec + the arXiv:2506.13800 reference framework.
+4. **Minimum `RiskAssessment` extension draft** — propose FHIR extensions for (model version, training-data window, calibration epoch, fairness flag, uncertainty, SHAP attribution JSON) and write it up as a mini ImplementationGuide.
+5. **In parallel**: proceed with the §10.4 GMLP pilot — extend the §9 candidate pool by 10–15 MIMIC repos (mortality / sepsis / LOS) and dry-run the GMLP scoring rubric on 3 of them.
