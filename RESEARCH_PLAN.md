@@ -155,9 +155,15 @@ Cluster repos into categories:
 | §11.2 Medication design deep dive | **done** (2026-04-21) |
 | §11.3 Integrated architecture proposal | **done** (2026-04-21) |
 | §11.4 Revised primary/secondary threads | **done** — supersedes §10.5 |
+| **§12 Gap-driven supplementary investigation** | **done** — 13 gaps closed, revised action list supersedes §11.5 |
+| §12.1 Hospital system supplementary | **done** (2026-04-21) — deployment, vendor, MIMIC→FHIR OSS, privacy, regulatory, server |
+| §12.2 Medication design supplementary | **done** (2026-04-21) — anticoag, AMS, opioid/PDMP, TDM, geriatric, KB, adherence, PV |
+| §12.3 Methodology & evaluation | **done** (2026-04-21) — UQ, calibration post-balance, DCA, trial design, drift |
+| §12.4 Verification status table | **done** — 2 items fetched & cross-checked |
+| §12.5 Revised follow-up actions (supersedes §11.5) | **done** |
 | Draft paper | not started |
 
-**Next action**: execute §11.5 step 1 — scaffold the CDS Hooks service stub (`/cds-services` + `patient-view` endpoint) as the concrete first artifact toward the §11.1(e) reference integration architecture. Run §10.4 GMLP pilot in parallel (see §11.4 secondary combo).
+**Next action**: execute §12.5 step 1 — scaffold a CDS Hooks service stub *on top of* kind-lab/mimic-fhir's FHIR R4 output (not a new converter), returning a `RiskAssessment` with the ML extensions defined in §12.5 steps 2-3-7. Run §10.4 GMLP pilot (now extended to the multi-jurisdictional regulatory matrix from §12.1.5) in parallel.
 
 ---
 
@@ -686,3 +692,198 @@ Rationale: (i) data-free via Synthea; (ii) directly exercises the two assets in 
 3. **HMCP tool manifest** — draft a JSON manifest describing the readmission tool and the typed-NER tool for consumption by an MCP-speaking LLM orchestrator. Compare against the Innovaccer HMCP spec + the arXiv:2506.13800 reference framework.
 4. **Minimum `RiskAssessment` extension draft** — propose FHIR extensions for (model version, training-data window, calibration epoch, fairness flag, uncertainty, SHAP attribution JSON) and write it up as a mini ImplementationGuide.
 5. **In parallel**: proceed with the §10.4 GMLP pilot — extend the §9 candidate pool by 10–15 MIMIC repos (mortality / sepsis / LOS) and dry-run the GMLP scoring rubric on 3 of them.
+
+---
+
+## 12. Gap-driven supplementary investigation (2026-04-21, continued)
+
+§11 identified two axes and four research threads but the supporting literature left clear unsurveyed gaps. §12 systematically catalogues those gaps, adds the 2024–2026 literature that closes them, verifies selected load-bearing claims, and revises the follow-up action list for the primary and secondary threads. §12.5 supersedes §11.5.
+
+### 12.0 Gap map
+
+| # | Short name | Source gap | Why it matters | Evidence class |
+|:--|:-----------|:-----------|:---------------|:---------------|
+| A | Real-world deployment cases | §11.1 cited standards, no metric-backed deployment | Shows whether §11.1(e) is reinventing solved problems | Case study |
+| B | Vendor-specific paths | §11.1(c)-4 flagged but unenumerated | MVIP must target the paths Epic / Oracle actually accept | Developer docs |
+| C | MIMIC→FHIR tooling | §11.5 action 2 was "to be written" | Reuse vs rebuild decision for the primary thread | Existing OSS |
+| D | Regulatory breadth | §10.4 = FDA only | US-state + EU + international compliance matrix | Law / guidance |
+| E | High-risk drug classes | §11.2 named 4 classes with no class-specific CDS review | Test cases for §11.2(e) | Domain CDS literature |
+| F | Drug KB consolidation | §11.2 used DrugBank / RxNorm / CPIC loosely | MedicationRequest interop requires canonical coding | Terminology |
+| G | Uncertainty quantification | §10.3 + §11.1(e) assume "uncertainty extension" with no method choice | MVIP must name a method | Method literature |
+| H | Calibration after balanced sampling | §10.3 flagged recalibration without method survey | This repo *uses* balanced sampling — directly load-bearing | 2026 evidence |
+| I | Privacy-preserving ML | §11 mentioned briefly | Many hospital deployments require FL / DP | Method + deployment |
+| J | Clinical utility measurement | §10 + §11 used AUROC only | DCA / net benefit is standard-of-care in 2025 | Methodology |
+| K | Prospective trial design | absent from §10 / §11 | A deployed model needs a prospective evaluation plan | Trial design |
+| L | Drift monitoring | §10.4 principle 10 only partial | MVIP needs a concrete drift-flag | Monitoring |
+| M | Pharmacovigilance integration | absent | Readmission signal can feed AEMS / FAERS | Regulatory infra |
+
+### 12.1 Hospital system design — supplementary findings (gaps A, B, C, D, I)
+
+**12.1.1 Real-world deployment evidence (A).**
+- **Penda Health + OpenAI AI Consult** (arXiv:2507.16947, July 2025). Jan–Apr 2025 study, 15 primary-care clinics in Nairobi, 39,849 patient visits (20,859 with AI Consult, 18,990 without). **16 % relative reduction in diagnostic errors; 13 % reduction in treatment errors.** No patient-reported-outcome difference in the study window (underpowered for that endpoint). Zero AI-caused harm. Clinician survey: 100 % reported quality improvement, 75 % "substantial". Unresolved critical "red" alerts dropped from ~40 % → ~20 % after focused training. LLM copilot runs in background during visits; de-identified documentation sent to OpenAI API at key workflow points. A PATH-partnered RCT is now underway. *Verification (WebFetch on arXiv abstract)*: metrics confirmed; specific workflow-invocation pattern + PHI-handling architecture + task decomposition are reserved for the full paper and cannot be cited at that detail level yet.
+- **AIM ECG-AI** (PubMed 40276542, 2025) — multicenter pragmatic cluster-randomized trial of EHR-integrated ECG-AI CDSS for low-LVEF detection.
+- **VTE prophylaxis in TBI** (Implementation Science s13012-024-01386-4, 2024) — pragmatic stepped-wedge hybrid type II trial across 9 heterogeneous hospitals with external control sites.
+- **ePNa pneumonia CDSS** (Intermountain Healthcare → AJRCCM stepped-wedge, plus a 2025 SMART-on-FHIR port for multi-EHR validation) — direct precedent for the §11.1(e) legacy-model wrapping approach.
+
+Implication: Penda demonstrates a production LLM-first copilot pattern. §11.1(e) — wrapping a legacy specialist ML model as a CDS Hooks + SMART + HMCP triple — is complementary, not duplicative.
+
+**12.1.2 Vendor-specific integration paths (B).**
+- **Epic**: App Orchard has been re-branded **Epic Showroom**. 2025 developer program adds "Validating AI Features" + ED Pre-Arrival + Specialty Registries playbooks. Epic reports ~200 AI features in development. Integration is FHIR R4 + SMART on FHIR 2.1; client ID / secret, redirect URIs, SMART scopes, launch contexts are all part of the Showroom registration.
+- **Oracle Health (Cerner)**: Cerner Code Console → developer platform. FHIR R4 + OAuth 2.0 for PowerChart. DSTU2 deprecated Dec 2025.
+- Both vendors converge on **FHIR R4 + SMART on FHIR 2.1 + CDS Hooks** — these are the MVIP targets for §11.1(e).
+
+**12.1.3 MIMIC → FHIR existing tooling (C).** *Critical finding — rewrites §11.5 action 2.*
+- **kind-lab/mimic-fhir v2.1.0** (2024-10-28, *WebFetch-verified*). FHIR R4. MIMIC-IV and MIMIC-IV-ED. PostgreSQL SQL scripts + HAPI FHIR JPA Server (Maven-run, no Docker stack). **No ML-specific extensions** — SHAP, model version, uncertainty, drift flag are not represented. MIT-Lab maintained, active development (501 commits main).
+- **srdc/mimic-iv-to-fhir** — uses the toFHIR transformation engine.
+- **skfit-uni-luebeck/mimic4fhir** — MIMIC-IV → HL7 FHIR R4 *or* German Medical Informatics Initiative core datasets.
+- **MIMIC IG v1.3.0** at `mimic.mit.edu/fhir/` — 25 profiles + 2 extensions + 35 ValueSets + 34 CodeSystems (JAMIA 2023, academic.oup.com/jamia/article/30/4/718/6998091).
+- **MIMIC-IV Clinical Database Demo on FHIR v2.1.0** on PhysioNet — 100 patients / ~915 K resources (demo); 315 K patients / ~5.84 M resources (full).
+- **Open MIMIC-III gap**: all four projects target MIMIC-IV. This repo uses MIMIC-III. Follow-up is either a MIMIC-III → MIMIC-IV schema mapping (most MIMIC-III tables have direct MIMIC-IV equivalents) or a narrow custom MIMIC-III adapter.
+
+**12.1.4 Privacy-preserving ML in hospital deployments (I).**
+- Differential privacy with calibrated noise on gradients: scalable, practical; incurs accuracy cost that shrinks with optimal ε budget.
+- Homomorphic encryption and secure MPC: stronger privacy, higher compute cost — less deployment-friendly than DP.
+- **PRIFLIC-Net** — DP Gaussian noise + HE for local updates in multi-hospital FL.
+- Raj et al. (Wiley *Concurrency & Computation* 2025, cpe.70365) — FL framework with *clinician feedback* loop for multi-hospital CDS.
+- Breast-cancer FL-DP (PMC12003885) and e-health FL frameworks 2025.
+
+**12.1.5 Regulatory matrix 2026 (D).** *Extends §10.4 beyond FDA.*
+
+| Jurisdiction | Framework | Effective | Applies to this repo? |
+|:-------------|:----------|:----------|:----------------------|
+| US FDA | GMLP (10 principles) + final PCCP guidance (Aug 2025) | Active. 30 devices (~10.2 %) cleared with PCCP in 2025; 6 PCCP example scenarios published | Yes if deployed clinically |
+| US FDA | Jan 2025 draft *Considerations for Use of AI to Support Regulatory Decision-Making for Drug and Biological Products* (7-step risk-based credibility assessment) | Draft | Indirect (model as drug-evidence) |
+| US FDA + EMA | Jan 14, 2026 *Guiding Principles of Good AI Practice in Drug Development* (10 joint principles) | Active (non-binding) | Indirect |
+| US state — CO | SB24-205 (comprehensive AI Act covering healthcare as a "consequential decision" domain for high-risk AI) | Pushed to 2026-06-30 | **Yes** — readmission scoring at deployer tier |
+| US state — CO | SB21-169 (insurance) | Active since 2021 | Only if deployed in insurance CDS |
+| US state — CA | CCRC FEHA ADS regulations | 2025-10-01 | Employment-ADS only |
+| EU | AI Act: general-purpose obligations | 2025-05 | If deployed in EU |
+| EU | AI Act: MDR class IIa/IIb/III + IVDR A-D = high-risk medical AI | 2027-08-02 (36 months after entry into force; majority of AI Act in force 2026-08-02) | **Yes** if EU deployment |
+| EU | MDR / IVDR | Active (AI Act allows consolidation with MDR technical docs) | Yes |
+| FDA | FAERS → **AEMS** transition (adverse event monitoring) | 2026-03-11 | Indirect |
+
+**12.1.6 FHIR server choice (C continued).** HAPI FHIR (open-source Java, research-friendly, fastest Docker setup) → recommended default for the §11.1(e) reference implementation. Aidbox (dev-focused, GraphQL + SQL + subscriptions + free dev license, Kubernetes-native) → better for a production pilot. Firely Server (.NET, FHIR-creators-backed) → compliance-strong commercial. LinuxForHealth (IBM) → open-source alternative.
+
+### 12.2 Medication design — supplementary findings (gaps E, F, M)
+
+**12.2.1 Anticoagulation CDS (E, highest-risk class).**
+- Warfarin ML on MIMIC-III: *Application of ML techniques for warfarin dosage prediction: a case study on the MIMIC-III dataset* (PMC11784795 / PeerJ cs-2612). **Direct dataset overlap with this repo.**
+- Reinforcement-learning warfarin dosing: 80.8 % excellent-responder ratio vs. 41.6 % standard practice; 99.5 % safety-responder ratio vs. 83.1 %.
+- CURATE.AI retrospective for warfarin dose optimisation (PMC12079355).
+- Bleeding-risk ML in AF anticoagulation (PubMed 40517766, 2025).
+- ML for warfarin therapy — systematic review (MDPI *Pharmaceuticals* 18/10/1544, 2025).
+- Narrative review on AI / ML for precision warfarin dosing (EJCP 2026, 00228-026-03997-w).
+- **CYP2C9 / VKORC1 genotypes explain < 50 % of dose variability** → strong argument for outcome-risk conditioning (§11.2(e)) — PGx alone is insufficient; a patient-level risk score adds complementary signal.
+- **Implication for §11.2(e)**: warfarin × MIMIC-III × readmission risk × CYP2C9/VKORC1 is the cleanest first test case — there is a prior-work baseline to beat, it is the top-risk class, and the data overlap is exact.
+
+**12.2.2 Antimicrobial stewardship CDS (E).**
+- KINBIOTICS (JMIR Human Factors 2025, e66699) — AI CDSS for sepsis antibiotic therapy, use-case analysis.
+- OneChoice / OneChoice Fusion — AI CDSSs for bacteremia management evaluated via clinical vignettes with specialist physicians.
+- Sepsis prediction ML — 30–60 % mortality reduction in quasi-experimental studies, 58 % in RCTs; AUROC 0.68–0.99 across models.
+- WGS + clinical metadata ML — > 90 % accuracy for resistance markers (hours vs. days turnaround).
+- **Critical systemic finding** ("*Bug Wars*", PMC12345688, and JAC advance article dkaf470): *"AI-CDSS have largely failed to integrate into clinical settings due to narrow scope of defined medical tasks, failure to consider stakeholder workflow, and lack of proper evaluation frameworks."* — direct primary-evidence for the §11.1(e) and §11.4 motivation that interface + workflow + evaluation frameworks are the binding constraint, not model accuracy.
+
+**12.2.3 Opioid stewardship + PDMP (E).**
+- PDMP-EHR integration → **~3× increase** in PDMP queries; ~⅓ of prescribers query via EHR (up from ⅕ in 2019). ONC + AHRQ framework.
+- ML for identifying potentially-inappropriate opioid prescribing (PMC9307080) — logistic regression, LASSO, CART, RF, GBM.
+- NIC RxGov — ML-powered PDMP platform.
+- Implication: another medication class that benefits from outcome-risk conditioning (§11.2(e) generalization pathway).
+
+**12.2.4 Precision dosing / TDM (E).**
+- **OPTIVAN** (JMIR 2025 e63983) — 7-feature ML (age, BMI, glucose, BUN, eGFR, Hct, daily dose / BW) predicting whether AUC₂₄/MIC is in therapeutic range for vancomycin.
+- ML-based PK model selection + averaging outperforms single PK models (CPT:PSP 2025 psp4.70084).
+- Continuous-learning MIPD reduces prediction error up to 13 % vs. static population models.
+- Bayesian forecasting now recommended in guidelines for vancomycin + beta-lactams.
+- Connection: "dose recommendation" is another medication-safety output that §11.2(e) prioritization can condition on outcome risk.
+
+**12.2.5 Geriatric / polypharmacy safety (E).**
+- **STOPP / START v3** (2023, Eur Geriatr Med, PMC10447584) — 190 criteria (v2: 114).
+- Two multicenter trials of CDSS for STOPP / START v2 → **15 % and 62 % advice uptake** — *suboptimal*. Implementation barriers: time constraints, high patient volume, notification fatigue.
+- Connection: exactly the alert-fatigue problem §11.2(e) addresses. Outcome-risk-conditioned prioritization of STOPP / START advice is a direct test application.
+
+**12.2.6 Drug knowledge-base consolidation (F).**
+- **RxNorm is the integration hub**: First DataBank, Multum, Micromedex, Gold Standard, SNOMED CT drug component, MeSH, ATC, DrugBank all map into RxNorm.
+- **NDC** → 11-digit HIPAA format via RxNorm.
+- **UMLS Metathesaurus** integrates SNOMED CT + LOINC + RxNorm.
+- **DrugBank powers RxNorm's DDI API.**
+- March 2025: RxClass removed "Therapeutic Role" classes (SNOMED inactivated grouper).
+- **Implication for this repo**: the typed BC5CDR CHEMICAL output from §3 should be *normalised to RxNorm* (not DrugBank directly) for interoperability with EHR `MedicationRequest`, `MedicationAdministration`, and RxNorm DDI API. A small RxNorm-normalisation layer becomes a concrete intermediate artifact (§12.5 action 6).
+
+**12.2.7 Medication adherence ML (E).**
+- **NYU Langone HF cohort — 34,697 patients** (JAMIA Dec 2025, ocaf162) — ML prediction of adherence to guideline-directed HF therapy with pharmacy-fill + neighborhood-level linkage.
+- Random Forest **AUC 0.92–0.98** for post-discharge compliance (medRxiv 2025.09.14.25335382).
+- **MedAdhereAI** (medRxiv 2025.07.01.25330675) — interpretable LR (AUC 0.82) + RF (AUC 0.77).
+- Connection: §11.2(a) decomposes drug-related readmission causes as 35 % prescribing / 35 % **non-adherence** / 30 % transition. Adherence is *the single largest causal sub-category* §11.2(e) does not yet touch. Pairing an adherence-prediction head with the readmission head is a natural multi-head extension.
+
+**12.2.8 Pharmacovigilance AI (M).**
+- **FDA "Elsa"** (launched June 2025) — agency-wide internal LLM for adverse-event summary, label comparison, code generation.
+- FDA Jan 2025 draft *Considerations for the Use of AI to Support Regulatory Decision-Making for Drug and Biological Products* — 7-step risk-based credibility assessment framework.
+- **FAERS data migrated to AEMS** on 2026-03-11.
+- Implication: a hospital-deployed readmission predictor with a documented medication-mediated-readmission sub-head (per §11.2(a) decomposition) becomes a first-class pharmacovigilance signal source. Upstream research angle: auto-generate AEMS-ready structured signals from deployed CDSS events.
+
+### 12.3 Methodology & evaluation — supplementary findings (gaps G, H, J, K, L)
+
+**12.3.1 Uncertainty quantification for LSTM-CNN (G).**
+- **MC Dropout** — simple retrofit, randomly deactivates nodes at inference; *Expected Calibration Error can be unstable* (e.g., ECE 0.7588 in a ChestX-ray14 pilot before remediation).
+- **Deep Ensembles** — 9-member ensemble in the same pilot achieved SOTA AUROC 0.8559 with stable calibration. Higher compute cost but strong production default.
+- **Conformal Prediction** — distribution-free, provides per-prediction sets with user-specified error-rate guarantee. Can wrap any base model without retraining.
+- **Recommendation for §11.1(e) MVIP**: expose uncertainty as a Conformal-Prediction interval (distribution-free guarantee); fall back to Deep Ensembles when a parametric mean ± sd interpretation is required.
+
+**12.3.2 Calibration after balanced sampling (H). CRITICAL finding — directly affects this repo.**
+- **medRxiv 2026.03.04.26347634** — *"Class imbalance correction in AI models leads to miscalibrated clinical predictions: a real-world evaluation."* Class-imbalance mitigation *artificially alters the pre-test probability distribution seen during training*, recasting the population context to which risk estimates apply → miscalibration that Platt-scaling does not fully repair.
+- **arxiv:2410.18144** — *Using Platt's scaling for calibration after undersampling — limitations*. Platt-alone is insufficient when training was on an undersampled majority class.
+- Isotonic regression delivers consistent probability-reliability gains in many settings, but **can collapse AUC to 0.51–0.56 in heterogeneous real-world data** — context-dependent, not a safe default.
+- **SFI-aware calibration** (Scientific Reports 2025, s41598-025-32656-w) — hybrid framework with label-free deployment; calibration parameters developed on labelled data but applied without labels on new sites.
+- **Implication for this repo**: §11.1(e) MVIP must *name* the calibration strategy explicitly. This repo's balanced sampling (README "Key decisions") means any deployment requires more than Platt scaling. The 2026 medRxiv paper is direct evidence this is not a theoretical concern.
+
+**12.3.3 Clinical utility measurement (J).**
+- **Decision Curve Analysis (DCA) / Net Benefit** — standard since Vickers & Elkin 2006, pipeline-standard by 2025.
+- **Lancet Digital Health 2025** (S2589-7500(25)00098-6) — *Evaluation of performance measures in predictive AI models to support medical decisions: overview and guidance*. Authoritative 2025 summary.
+- **AXIS-2 risk score** (BMC Emergency Medicine 2026, s12873-026-01496-w) — applied DCA to 30-day ED revisit prediction. Direct task-family overlap with this repo.
+- **ACS-SRC readmission prevention** — DCA shows net benefit at 5–20 % risk range; "treat-all" and "treat-none" strategies as baselines.
+- **Implication**: §11.1(e) MVIP should publish a DCA net-benefit array at fixed thresholds (e.g., 10 %, 15 %, 20 %, 30 %) as a required field of the `RiskAssessment` extension — not just AUROC / AUPRC metadata.
+
+**12.3.4 Prospective CDSS trial design (K).**
+- Pragmatic cluster-randomized: AIM ECG-AI (40276542); 38-clinic cognitive-impairment trial (PMC12551766).
+- Pragmatic stepped-wedge: TBI VTE prophylaxis with external control sites (s13012-024-01386-4); Intermountain ePNa pneumonia stepped-wedge (AJRCCM).
+- JMIR 2025 e63733 systematic review — *Designing CDSS: user-centered lens of design characteristics, challenges, implications*.
+- Implication: the §11.1(e) reference implementation pairs naturally with a **pre-registered stepped-wedge simulated-evaluation plan** on Synthea — no live-patient arm required; the plan becomes the roadmap for a future prospective study.
+
+**12.3.5 Drift detection in production (L).**
+- Nat Commun 2024 / PMC10904813 — empirical data-drift experiments on real-world medical imaging.
+- Systematic review *Strategies for detecting and mitigating dataset shift in ML for health predictions* (S1532046425001315) — model-based monitoring + statistical tests dominant detection; retraining + feature engineering dominant correction.
+- **Key**: *"Monitoring performance alone is not a good proxy for detecting data drift."* Input-distribution drift needs its own detector.
+- Implication: §11.1(e) MVIP must include a **drift-flag extension** (boolean + summary statistic) in the `RiskAssessment`. Even a simple KS / Wasserstein statistic on the 76-dim observation vector vs. training distribution is concrete and acceptable as a scaffold.
+
+### 12.4 Verification status
+
+| Claim | Source | Verification |
+|:------|:-------|:-------------|
+| Penda Health 16 % diagnostic / 13 % treatment error reduction, 39,849 visits, 15 clinics | arXiv:2507.16947 + OpenAI blog | ✓ WebFetch-verified (abstract); workflow-invocation + PHI-handling details deferred to full paper |
+| kind-lab/mimic-fhir: FHIR R4, MIMIC-IV + ED, SQL+HAPI, no ML extensions | GitHub v2.1.0 (2024-10-28) | ✓ WebFetch-verified |
+| Class-imbalance correction → miscalibration | medRxiv 2026.03.04.26347634 | Literature-cited (not fetched) |
+| FDA PCCP 2025: 30 devices (≈ 10.2 %), 6 scenarios, Aug 2025 final | FDA media + innolitics year-in-review | Literature-cited |
+| Colorado SB24-205 implementation 2026-06-30, healthcare high-risk | Seyfarth + Credo AI + GovTech | Literature-cited |
+| EU AI Act medical high-risk effective 2027-08-02 | White & Case + Reed Smith + PMC11379845 | Literature-cited |
+| STOPP/START v3 CDSS uptake 15 % and 62 % in two trials | PMC10447584 (v3 paper) + PSNet | Literature-cited |
+| RxNorm integrates DrugBank, SNOMED CT, ATC, NDC, MeSH | NLM RxNorm overview + DrugBank blog | Literature-cited |
+| MC Dropout ECE 0.76 → Deep Ensemble 0.8559 AUROC | arXiv:2511.18839 | Literature-cited |
+
+### 12.5 Revised follow-up actions (supersedes §11.5)
+
+1. **Do NOT rebuild the MIMIC→FHIR converter.** Extend **kind-lab/mimic-fhir** with an *ML extension profile module*: SHAP attribution, model version, training-data window, calibration strategy + epoch, uncertainty interval (Conformal or Deep Ensemble), fairness flag, drift flag, DCA net-benefit array. Ship as an add-on `ImplementationGuide`, not a fork. Address the MIMIC-III vs MIMIC-IV mismatch by providing a small MIMIC-III → MIMIC-IV schema adapter for this repo's LSTM-CNN input.
+2. **Name the calibration strategy in the MVIP.** Default to *Conformal Prediction* for distribution-free guarantees; fallback to *Deep Ensembles* for parametric intervals. Explicitly reject Platt-scaling-only as inadequate under this repo's balanced-sampling training regime, citing medRxiv 2026.03.04.26347634 + arXiv:2410.18144 + Scientific Reports s41598-025-32656-w.
+3. **Add a DCA net-benefit array to the `RiskAssessment` profile.** Fixed thresholds (10 %, 15 %, 20 %, 30 %); computed on the evaluation split. Include alongside AUROC / AUPRC in the model-version metadata extension. Reference Lancet Digital Health 2025 S2589-7500(25)00098-6 as the normative source.
+4. **Extend the §10.4 GMLP audit checklist to a multi-jurisdictional matrix.** From "10 GMLP principles" to "GMLP + FDA PCCP presence + Colorado SB24-205 deployer controls + EU AI Act high-risk applicability + calibration strategy documented + drift monitor present." Per-principle tri-state scoring remains. Multi-jurisdictional score makes the audit paper stronger.
+5. **Anticoagulation (warfarin × MIMIC-III) as the §11.2(e) first instantiation.** Baseline literature exists (PMC11784795 / PeerJ cs-2612) to compare against. Specific composite signal: *warfarin dose × readmission risk × CYP2C9/VKORC1 PGx × bleeding-risk ML*. Deferred until `MIMIC_DATA_ROOT` is set; the research design can be pre-registered now.
+6. **Typed BC5CDR CHEMICAL → RxNorm normalisation layer.** Small standalone artifact. Unblocks interoperability with FHIR `MedicationRequest` and with the RxNorm DDI API (DrugBank-powered). Data-free; uses NLM RxNav.
+7. **Drift-flag scaffold in the reference implementation.** Simple KS / Wasserstein on the 76-dim observation vector vs. the training distribution. Publishing a scaffold, not a SOTA detector. The *presence* of a drift field in the extension IG is the contribution.
+8. **Adherence-prediction multi-head extension (medium-term).** Add an adherence prediction head alongside the readmission head to target the 35 % non-adherence sub-category of drug-related readmissions (§11.2(a)). Literature baselines: NYU HF cohort JAMIA ocaf162, MedAdhereAI medRxiv 2025.07.01. Data-required.
+9. **Pre-register a stepped-wedge simulated-evaluation plan on Synthea.** Pairs with §11.1(e) primary deliverable; references AJRCCM ePNa + Implementation Science s13012-024-01386-4 as design precedents.
+10. **Reject scope creep** into drug repurposing, imaging CDS, genomics variant calling — these exist in the literature but are orthogonal to this repo's readmission-prediction foundation and the two axes §11 named.
+
+### 12.6 Scope & deferral notes
+
+- **Explicit defers** (noted, not executed): (a) MIMIC-III-specific MIMIC→FHIR adapter audit — all four major OSS projects target MIMIC-IV; this repo is MIMIC-III, so either a schema adapter or a narrow custom path is required; captured in §12.5 action 1. (b) International regulatory beyond US + EU (KR MFDS, JP PMDA, UK MHRA) — only lightly searched in the preceding rounds; expand if a Korean / Japanese / UK deployment scenario becomes real.
+- **Out of scope**: drug repurposing, imaging CDS, genomics variant calling, billing / revenue-cycle CDS, supply-chain pharmacy robotics. These are real fields with active literature but are orthogonal to the readmission + medication safety focus established in §10 + §11.
+- **Source reliability**: several 2025 sources are pre-prints (medRxiv / arXiv). Where a load-bearing claim rests on a pre-print (notably §12.3.2 miscalibration, §12.3.5 drift review), final-publication peer-reviewed versions must replace the pre-print citation before any paper built on §11.1(e) is submitted.
