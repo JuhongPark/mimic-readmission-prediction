@@ -161,9 +161,24 @@ Cluster repos into categories:
 | §12.3 Methodology & evaluation | **done** (2026-04-21) — UQ, calibration post-balance, DCA, trial design, drift |
 | §12.4 Verification status table | **done** — 2 items fetched & cross-checked |
 | §12.5 Revised follow-up actions (supersedes §11.5) | **done** |
+| **§13 AI system design & management — MIT SDM lens** | **done** — re-framing §10-§12 as engineering-systems + management problem |
+| §13.1–.2 Boundary, OPM, SVN | **done** (2026-04-21) |
+| §13.3 QAS + ATAM tradeoffs | **done** |
+| §13.4 Causal Loop Diagram | **done** — 4 loops (alert fatigue, trust erosion, regulatory ratchet, platform network effect) |
+| §13.5 ADRs 001–008 | **done** — 7 decided, 1 open (MIMIC-III↔IV) |
+| §13.6 DSM | **done** |
+| §13.7 Real options | **done** — 4 options identified |
+| §13.8 Dominant design / S-curve | **done** |
+| §13.9 RACI + team topology | **done** |
+| §13.10 Portfolio roadmap | **done** |
+| §13.11 NIST AI RMF map | **done** |
+| §13.12 TCO + unit economics | **done** |
+| §13.13 Sociotechnical MLP | **done** |
+| §13.14 Primary thread reframed → platform | **done** |
+| §13.15 SDM action list (supersedes §12.5) | **done** |
 | Draft paper | not started |
 
-**Next action**: execute §12.5 step 1 — scaffold a CDS Hooks service stub *on top of* kind-lab/mimic-fhir's FHIR R4 output (not a new converter), returning a `RiskAssessment` with the ML extensions defined in §12.5 steps 2-3-7. Run §10.4 GMLP pilot (now extended to the multi-jurisdictional regulatory matrix from §12.1.5) in parallel.
+**Next action**: execute §13.15 action 1 — write ADR-001…008 as markdown under `docs/adr/`. This is the lightest-weight SDM artifact (pure documentation, no code), yields durable architectural decisions, and sets the scaffold that subsequent actions (MVIP spec, model card, CDS Hooks service stub) can reference.
 
 ---
 
@@ -887,3 +902,313 @@ Implication: Penda demonstrates a production LLM-first copilot pattern. §11.1(e
 - **Explicit defers** (noted, not executed): (a) MIMIC-III-specific MIMIC→FHIR adapter audit — all four major OSS projects target MIMIC-IV; this repo is MIMIC-III, so either a schema adapter or a narrow custom path is required; captured in §12.5 action 1. (b) International regulatory beyond US + EU (KR MFDS, JP PMDA, UK MHRA) — only lightly searched in the preceding rounds; expand if a Korean / Japanese / UK deployment scenario becomes real.
 - **Out of scope**: drug repurposing, imaging CDS, genomics variant calling, billing / revenue-cycle CDS, supply-chain pharmacy robotics. These are real fields with active literature but are orthogonal to the readmission + medication safety focus established in §10 + §11.
 - **Source reliability**: several 2025 sources are pre-prints (medRxiv / arXiv). Where a load-bearing claim rests on a pre-print (notably §12.3.2 miscalibration, §12.3.5 drift review), final-publication peer-reviewed versions must replace the pre-print citation before any paper built on §11.1(e) is submitted.
+
+---
+
+## 13. AI system design & management — MIT SDM lens (2026-04-21)
+
+### 13.0 Pivot — why this section exists
+
+§10–§12 framed the problem from the *clinical-domain* side (FHIR resources, CDSS standards, medication-safety patterns, regulatory checklists) and asked "how does this model deploy into an EHR-compatible hospital environment?" §13 re-frames the same problem from the *engineering-systems + management* side and asks the questions an MIT SDM (System Design & Management) / ESD (Engineering Systems Division) analysis demands. The clinical facts from §10–§12 become inputs; the artifacts of this section are the deliverables:
+
+- What *is* the system and where are its boundaries?
+- Who are the stakeholders and what value flows among them?
+- Which quality attributes drive architecture, and how do they trade off?
+- Which feedback loops govern system behaviour?
+- Which decisions are *commitments* and which are *real options*?
+- Where is the field in its technology lifecycle, and what does dominant-design analysis predict?
+- Who owns what, and what operating model supports it?
+- What is the portfolio view under dependency + risk?
+- What are the TCO, unit economics, and value model?
+- How does a sociotechnical-transition (MLP) analysis position the system?
+
+### 13.1 System boundary & OPM view
+
+Three boundary choices, each implying different stakeholders and quality-attribute concerns:
+
+| Boundary | Contents | Excluded | Used by |
+|:---------|:---------|:---------|:--------|
+| **Model boundary** | LSTM-CNN + typed BC5CDR NER + SHAP | Everything else | Single-paper academic evaluation (what the original repo optimises) |
+| **Deployment boundary** | Model + FHIR adapter + CDS Hooks service + drift monitor + calibration layer + SMART auth | EHR, clinician, patient, billing | §11.1(e) MVIP scope |
+| **Clinical-work-system boundary** | Deployment + EHR + clinician + patient + workflow + audit policies + regulators | Population health, payer analytics | SDM analysis in §13 |
+
+OPM (Object-Process Methodology, Crawley / Dori) sketch:
+- **System function**: *reduce preventable 30-day readmissions by informing discharge decisions and downstream medication-safety steps.*
+- **System form**: 4 modalities → predictor → CDS Hooks card → clinician decision → medication order → medication administration → outcome.
+- **Decomposition**: the model is a *constituent*; the EHR is the *environment*; the clinician is both *operand* (target of information) and *operator* (agent of decision); the patient is the *beneficiary*.
+
+Load-bearing insight: the model is *not* the system. The model is a constituent that enables a system function at the clinical-work-system boundary. Most ML papers stop at the model boundary; SDM analysis forces the outer ring.
+
+### 13.2 Stakeholder Value Network (SVN)
+
+Primary stakeholders (direct value exchange):
+- **Patient** — receives outcome (value-in); contributes data (value-out).
+- **Clinician / prescriber** — receives risk information + alerts (value-in); contributes attention + decisions + override signal (value-out).
+- **Hospital administration** — receives reduced readmissions + regulatory compliance (value-in); contributes capital + governance + operations (value-out).
+- **EHR vendor** (Epic / Oracle Health) — receives app-ecosystem value (value-in); contributes integration platform (value-out).
+- **Regulator** (FDA + state CO + EU + FDA/EMA drug-AI) — receives compliance artifacts (value-in); contributes legitimacy-to-deploy (value-out).
+- **Payer** — receives reduced readmission cost (value-in); contributes reimbursement policy (value-out).
+
+Secondary: model developer / researcher, data steward (MIMIC / PhysioNet), IRB / ethics, IT-ops / SRE, pharmacy (downstream medication-safety consumer).
+
+**Load-bearing value flow**: *clinician attention* is the scarce good in the system. Alert fatigue (§11.2) erodes it; trust is the currency that gates whether the clinician spends attention on the model's output. Every architectural choice (calibration, explainability, alert prioritization) either protects or depletes the clinician-attention budget. Literature converges here — *stakeholders favour models endorsed by trusted people and institutions* (JMIR 2025 e78757) — so SVN points at trust as the network's critical edge.
+
+### 13.3 Quality Attribute Scenarios (QAS) + ATAM-style tradeoffs
+
+ATAM (Kazman / Klein / Clements, SEI) adapted to clinical ML. For each quality attribute, a concrete scenario (source → stimulus → environment → response → measure):
+
+| Quality attribute | Stimulus | Source | Environment | Response | Measure | Anchor |
+|:------------------|:---------|:-------|:------------|:---------|:--------|:-------|
+| Reliability | CDS Hooks request | Clinician at order-entry | Production EHR | Prediction returned | < 500 ms p99 | CDS Hooks spec |
+| Availability | Service failure | Infra outage | Business hours | Graceful fallback | 99.95 % uptime | GMLP P10 |
+| Safety | Silent input-drift > ε for > N days | Population shift | Production | Drift flag + operator alert | KS statistic > threshold → alert < 24 h | §12.3.5 |
+| Modifiability | FHIR R4 → R5 migration | Vendor roadmap | Upgrade window | No code rewrite | < 1 PR + config | §11.1(a) |
+| Security | Untrusted SMART launch | Hostile app | Prod | Scope-limited access | 0 cross-patient reads | SMART 2.1 |
+| Fairness | Subgroup audit | Audit trigger | Any | Per-subgroup AUROC + spread | Spread < 0.05 | GMLP P3 |
+| Explainability | Clinician inspection | User action | Chart view | SHAP top-5 features + force plot | < 200 ms to render | README "Key finding" |
+| Maintainability | Drift flag raised | Monitor | Prod | Retrain + PCCP-aligned redeploy | < 30 days | §12.5 action 7 |
+
+Tradeoff identification (ATAM step: sensitivity + tradeoff points):
+- **Reliability ↔ Explainability**: SHAP DeepExplainer is O(model-passes × features); the 500 ms p99 budget tightens against the 200 ms render budget. *Mitigation*: pre-compute and cache SHAP at prediction time; serve both in one response.
+- **Modifiability ↔ Safety**: Conformal-Prediction wrapping simplifies model-swap but widens prediction intervals. *Mitigation*: calibrate the Conformal set on a production-aligned reference sample.
+- **Fairness ↔ Overall accuracy**: subgroup-spread constraint adds a Lagrangian term during training. *Tradeoff accepted*: small AUROC give-up for fairness guarantee (GMLP P3).
+- **Availability ↔ Change-velocity**: PCCP raises update velocity but requires more pre-registration. *Tradeoff accepted*: structured envelope of changes.
+
+### 13.4 System dynamics — Causal Loop Diagram (CLD)
+
+Four loops govern system behaviour. R = reinforcing, B = balancing.
+
+**R1 — Alert fatigue (undesired reinforcing).** More alerts fired → override rate rises → the alert channel signal-to-noise drops → model developer tunes toward higher sensitivity to avoid missing → more alerts fired → (reinforces). **Leverage point**: prioritization conditioned on *patient-specific* outcome risk (§11.2(e)), raising the expected value per alert click.
+
+**B2 — Trust erosion (undesired balancing).** Bad prediction → trust drops → adoption drops → fewer overrides observed → slower feedback → slower recalibration → more bad predictions. **Leverage point**: explainability (SHAP) compresses the feedback cycle by letting the clinician infer *why* a prediction was wrong without waiting for aggregate statistics. This is the empirical finding from this repo's README ("Key finding — Interpretability enabled clinical adoption").
+
+**R3 — Regulatory ratchet (field-level reinforcing).** Capability grows → regulation tightens → compliance cost rises → fewer deployments survive → slower learning → pressure builds for fresh capability → (reinforces). **Leverage point**: PCCP-style real options (§13.7) absorb regulatory cost into pre-registered envelopes, damping the ratchet.
+
+**R4 — Platform network effect (desired reinforcing).** More models expose SMART + CDS Hooks + HMCP → more value to EHRs from supporting the protocol → EHR vendor support and docs improve → easier for next model to expose → more models expose → (reinforces). **Leverage point**: this repo's §11.1(e) MVIP *participates* in this loop; adoption is the contribution.
+
+Cross-loop note: R1 and B2 are tightly coupled by the clinician-attention budget. The SDM-correct architectural move is to *design against R1 by conditioning on outcome risk while designing against B2 by preserving explainability* — i.e., both §11.1(e) and §11.2(e) attack the same sociotechnical bottleneck from different sides.
+
+### 13.5 Architecture Decision Records (ADRs)
+
+Eight ADRs capture the major §11–§12 architectural decisions. Each should become a markdown file under `docs/adr/` (§13.15 action 1).
+
+| ADR | Decision | Status | Consequences (+/−) |
+|:----|:---------|:-------|:-------------------|
+| **001** Reuse `kind-lab/mimic-fhir` vs. build custom | Reuse + extend with ML IG (§12.5.1) | Accepted | + inherits 25 FHIR profiles; − locked to MIMIC-IV schema, requires MIMIC-III↔IV adapter |
+| **002** Calibration strategy for balanced-sampling model | Conformal Prediction default; Deep Ensembles fallback (§12.5.2) | Accepted | + distribution-free guarantees; − wider intervals than parametric; explicitly rejects Platt-only |
+| **003** Interface triple (CDS Hooks + SMART + HMCP) vs. single interface | Triple (§11.1(e)) | Accepted | + three consumer modalities (workflow-embedded / launched-app / LLM-orchestrated); − 3× surface to maintain |
+| **004** MIMIC-III primary vs. migrate to MIMIC-IV | Undecided — decision node | Open | MIMIC-IV has active FHIR tooling (§12.1.3); MIMIC-III has direct anticoagulation baseline (§12.2.1). Defer pending data access |
+| **005** FHIR server for reference impl | HAPI FHIR (§12.1.6) | Accepted | + research-friendly, 2-command Docker; − Java dev cost; Aidbox is the production-pilot upgrade path |
+| **006** Retain balanced sampling | Retain + document with calibration strategy (ADR-002) | Accepted | + preserves existing training pipeline; − imposes non-trivial deployment calibration work that ADR-002 discharges |
+| **007** Drug-entity normalisation | BC5CDR CHEMICAL → RxNorm (§12.5.6) | Accepted | + EHR MedicationRequest interop, DrugBank-via-RxNorm DDI API; − NLM RxNav runtime dependency |
+| **008** Scope — platform vs. product | Platform (reusable spec + IG + reference impl) demonstrated on this repo's LSTM-CNN (§13.14) | Accepted | + other research groups can adopt; − requires abstraction work not in the original repo plan |
+
+ADR-004 is deliberately left open as a decision node — SDM practice holds that unresolved decisions *should be visible*, not hidden.
+
+### 13.6 Design Structure Matrix (DSM) — capability dependency
+
+Component dependencies (row *depends on* column). "↓" = build-time dep, "→" = runtime data flow.
+
+|   | LSTM | NER | BC5CDR | SHAP | FHIR-adapter | Calib | Drift | RxNorm | CDS-Hooks | MCP |
+|---|:----:|:---:|:------:|:----:|:------------:|:-----:|:-----:|:------:|:---------:|:---:|
+| **LSTM** | — | — | — | — | → | ↓ | ↓ | — | → | → |
+| **NER** | — | — | ↓ | — | → | — | — | ↓ | → | → |
+| **BC5CDR** | — | — | — | — | — | — | — | — | — | — |
+| **SHAP** | ↓ | — | — | — | — | — | — | — | → | → |
+| **FHIR-adapter** | ↓ | ↓ | — | ↓ | — | — | — | ↓ | ← | ← |
+| **Calibration** | ↓ | — | — | — | — | — | ↓ | — | — | — |
+| **Drift** | ↓ | ↓ | — | — | → | ↓ | — | — | — | — |
+
+Readings:
+- **FHIR-adapter has fan-in 4** (LSTM, NER, SHAP, RxNorm) — it is the integration bottleneck; failure here cascades. *Implication*: the adapter is the critical path for ADR-003's triple interface.
+- **Calibration and Drift form a short chain** (both depend on LSTM; Drift further depends on Calibration). *Implication*: deploy coherently; do not ship the model without both.
+- **SHAP has fan-out 2** (CDS Hooks, MCP) — compute once, cache, reuse. *Implication*: explainability cache is an optimization point against the Reliability ↔ Explainability tradeoff in §13.3.
+- **BC5CDR has zero out-arrows** in the deployment-time DSM — it is a build-time artifact (the model used to produce the typed NER), not a runtime dependency. *Implication*: the deployment stack need not ship `en_ner_bc5cdr_md` at runtime; embeddings or cached outputs suffice.
+
+### 13.7 Real options in the design
+
+Four options, each adds flexibility at a capped scaffolding cost:
+
+| Option | Exercise when | Exercise cost | Value when exercised | Scaffolding cost (now) |
+|:-------|:--------------|:--------------|:---------------------|:-----------------------|
+| Extend to FHIR R5 subscriptions | EHR vendors adopt R5 subscriptions | Config + test; via R5 Subscription Backport IG | Real-time event-driven invocation replaces polling | Include Backport endpoint stub in MVIP |
+| Activate adherence multi-head | `MIMIC_DATA_ROOT` becomes available | Add head + retrain | Targets 35 % non-adherence slice of drug-related readmissions (§11.2(a)) | Schema slot in MVIP; no training |
+| PCCP post-clearance | Model performance drifts or clinical need shifts | Execute pre-registered modification protocol | Iterative improvement without full re-submission. **Only ~8 % of 2025 cleared AI devices exercised this** (medRxiv 2025.08.26.25334477) — the option is under-exercised, so early adopters gain relative advantage | Write PCCP draft alongside model card |
+| Swap base model via Conformal wrapper | New backbone (transformer) becomes available | Re-fit Conformal calibration set | Upgrade without API break | Design LSTM-CNN as wrapped; API-stable |
+
+Real-options framing reframes "over-engineering" critiques: each option *does not require* immediate implementation. The investment is the scaffolded slot (HMCP manifest, Subscription endpoint, multi-head architecture, Conformal wrapper) — not the exercise.
+
+### 13.8 Technology lifecycle & dominant design
+
+Utterback S-curve analysis of clinical-AI-in-hospital-EHR integration:
+
+- **Dominant-design candidate**: SMART on FHIR + CDS Hooks + FHIR R4/R5 + MCP/HMCP. §12.1.1–.2 evidence shows Epic + Oracle Health + emerging open-source MCP stack (WSO2 / AgentCare / Momentum / Innovaccer HMCP) all converging on this quadruple.
+- **S-curve position**: early-adopter → early-majority transition. Divergent indicators:
+  - Infrastructure high: 90–95 % of U.S. hospitals have SMART endpoints; 100 % of ONC-certified EHRs do (§11.1).
+  - Governance low: only ~12 % of hospitals have a formal AI governance framework (NIST AI RMF Censinet 2025); only ~8 % of cleared AI devices use PCCP.
+  - This "infrastructure ahead of governance" gap is characteristic of the steep middle of the S-curve.
+- **Disruption watch**: LLM orchestrators (GPT-style) positioning between clinician and EHR as "system of work" (McKinsey 2025); hyperscalers (Azure / AWS / Google) consolidating the operating layer.
+- **Implication**: deploying *into* the emerging dominant design is strategically correct. §11.1(e) is this action. A strategy that waits for the dominant design to stabilize (e.g., targets FHIR R6 only, or waits for a standardized HMCP) forgoes the early-majority window.
+
+### 13.9 Organizational / responsibility design (management lens)
+
+RACI for a deployed ML-CDSS. A = Accountable, R = Responsible, C = Consulted, I = Informed.
+
+| Activity | CMIO / CHIO | CIO | Clinical dept | IT-Ops / SRE | Data science | Ethics / compliance | Vendor |
+|:---------|:----:|:---:|:-------------:|:------------:|:------------:|:-------------------:|:------:|
+| Clinical appropriateness of output | **A** | C | R | I | C | C | I |
+| Model training / retraining | C | I | C | I | **R/A** | C | C |
+| FHIR / CDS Hooks integration | C | **A** | I | R | C | I | R |
+| Drift monitoring | C | C | I | R | **R/A** | I | C |
+| Override-rate monitoring | **R** | I | R | C | C | **A** | I |
+| Fairness audit | C | I | C | I | R | **R/A** | I |
+| PCCP submission | C | C | C | I | R | **R/A** | C |
+| Incident response | **A** | R | R | R | R | C | C |
+
+Key reading: **override-rate monitoring is cross-functional and often under-owned**. CMIO / CHIO must be named Accountable because override rate is the clinical-safety-critical feedback signal for the entire system (ties back to CLD loop R1 in §13.4).
+
+Team topology (Skelton & Pais). The clinical ML capability maps to a **platform team** serving **stream-aligned teams** (clinical departments with specific use cases — readmission, sepsis, AMS, etc.) plus an **enabling team** (ethics + data governance + compliance). The "shadow AI" trend flagged by Wolters Kluwer 2026 is best read as a *missing platform service* symptom, not a policy-compliance failure — the platform team's mandate is to provide sanctioned alternatives.
+
+CHIO (Chief Health Informatics Officer) is the emerging C-suite placement for this function (TechTarget 2025), consolidating CMIO + CNIO accountabilities.
+
+### 13.10 Portfolio view & roadmap
+
+Capability portfolio with §12.5 + §13.15 actions (rows = capability, cols = quarter):
+
+| Capability | Q2 '26 | Q3 '26 | Q4 '26 | Q1 '27 | Q2 '27 |
+|:-----------|:------|:------|:------|:------|:------|
+| Readmission ref impl (§11.1(e)) | **Primary** scaffold (ADRs + MVIP spec) | Reference impl stubs | Synthea demo | Stepped-wedge plan | Early pilot |
+| GMLP + multi-jurisdictional audit | Extend pool | Dry-run | Scoring rubric | Draft paper | Submit |
+| Outcome-risk-conditioned med safety (§11.2(e)) | — | Data-access negotiation | Warfarin sim design | Warfarin sim | DDI / recon / PGx |
+| NER → RxNorm layer | — | Scaffold | Validate | Release | Reuse downstream |
+| Drift scaffold (§12.5.7) | — | Scaffold (KS) | Integrate | — | — |
+| Adherence multi-head | — | — | — | Feasibility | Build (data-req.) |
+| Stepped-wedge plan on Synthea | — | — | Draft | Pre-register | — |
+| Model card + datasheet (§13.15.3) | Draft | Publish | Review annually | — | — |
+
+**Critical path**: §13.15 action 1 (ADRs) → action 2 (MVIP spec) → action 3 (model card + datasheet) → action 7 (CDS Hooks service stub) → Synthea demo → stepped-wedge plan → early pilot. This path mints a deployable artifact and a reviewable paper simultaneously.
+
+### 13.11 NIST AI RMF mapping (Govern / Map / Measure / Manage)
+
+| RMF function | This-repo-specific practices |
+|:-------------|:-----------------------------|
+| **Govern** | ADR-008 sets platform-vs-product scope; §13.9 RACI names Accountable roles; external alignment: NAM *AI Code of Conduct* (May 2025), CAOS-RE (Springer 10.1007/s10728-025-00537-y); publish ADRs + MVIP spec + model card as governance artifacts. |
+| **Map** | §13.1 system boundary; §13.2 SVN; §13.3 QAS (stakeholders × environments × responses); §13.4 CLD identifies feedback-loop risks; §13.13 MLP positions the niche. |
+| **Measure** | §13.3 QAS response-measures + §12.5.3 DCA net-benefit array + subgroup AUROC + override rate + drift KS statistic + calibration ECE. Publish measured values in the `RiskAssessment` model-version extension. |
+| **Manage** | Drift → retrain workflow (§12.5.7); PCCP pre-registered envelope (§13.7); RACI-bound incident response (§13.9); real-option exercise triggers (§13.7) handled at Manage-phase review. |
+
+Only ~12 % of hospitals currently have a formal AI governance framework (Censinet 2025, single-source — verify before citing in paper). Together §13.9 RACI + §13.3 QAS + §13.4 CLD + §13.11 RMF map constitute a **deployable governance scaffold** for a hospital adopting this repo's model — i.e., the hospital gets the governance artifacts alongside the code.
+
+### 13.12 Economics — TCO + unit economics + NPV
+
+TCO sketch for a single-hospital deployment of this repo's LSTM-CNN (nominal ranges):
+
+| Category | Annual $ (order of magnitude) | Notes |
+|:---------|:------------------------------|:------|
+| Infrastructure (CPU / GPU + FHIR server hosting) | $10 K – $30 K | HAPI + light serving; cloud surcharge if hyperscaler |
+| Model serving + inference compute | $5 K – $20 K | Batch or near-real-time; < 50 predictions / min |
+| Drift monitoring + telemetry | $3 K – $10 K | §12.5.7 |
+| Periodic retraining + PCCP ops | $20 K – $60 K | Data-science FTE fraction |
+| Governance (ethics / compliance / legal) | $10 K – $30 K | Shared overhead |
+| Integration (EHR adapter + on-call) | $30 K – $100 K | Upfront-heavy; amortize |
+| **Total nominal annual OPEX** | **$78 K – $250 K** | |
+
+**Vendor hidden costs** (§13 search): a healthcare deployment found 63 % of real AI costs came from data-pipeline optimisation + GPU-cluster management — invisible in vendor ROI calculators. Any SDM TCO model must internalize these.
+
+Value model:
+- preventable readmissions × cost-per-readmission × PPV × adoption-rate
+- Typical U.S. readmission cost: $15 K – $20 K per event
+- On a base of 15 % readmission rate × 5 000 discharges / year, a 1 pp reduction = 50 events × $17 K = **$850 K / yr** — comfortably exceeding the $78 K – $250 K TCO band if PPV × adoption > ~ 25 %.
+- Upper-bound precedent: RPM (remote patient monitoring) has shown 20–40 % readmission reduction (industry reports, 2025).
+- Industry ROI benchmark: $3.20 per $1 over 14 months; 147 % 3-year ROI (healthcare-AI vendor reports; treat cautiously — §13.16).
+
+**Real-options NPV adjustment**. The PCCP real option (§13.7) is Black-Scholes-style: a pre-registered modification protocol is a *call option on future model improvements*, valuable precisely when model-performance uncertainty is high. Under 2025 FDA guidance, exercising it costs only the protocol validation step — orders of magnitude cheaper than a new 510(k). The option premium is what the repo pays now (ADR + documentation work); the pay-off is realized in the 2027–2029 window.
+
+### 13.13 Sociotechnical transition — MLP (Geels)
+
+- **Landscape** (stable macro-pressures): value-based care payment reform; aging population; clinician shortage; regulatory tightening; AI capability curve; geopolitical data-sovereignty pressure.
+- **Regime** (current sociotechnical system, self-reinforcing): fee-for-service billing; EHR-vendor-dominated IT; rule-based CDS; physician-central workflow; episodic care delivery.
+- **Niches** (innovation loci): academic research repos (this repo's origin); startup LLM copilots (Penda Health + OpenAI §12.1.1; Abridge; Nuance DAX); EHR-vendor AI modules (Epic's ~200 AI features); regulatory sandboxes (UK MHRA, Korea K-FDA).
+- **Transition pressure**: strong landscape pressure on the regime (VBC + demographics + shortage) + accelerating niche maturation (LLM + agentic AI) → *regime-destabilizing*. Transition window estimated 2026–2030.
+
+Position of §11.1(e): explicitly a **niche-to-regime bridge**. It gives the niche (a research-grade LSTM-CNN + typed NER) a standardized interface (SMART + CDS Hooks + MCP) into the regime's dominant design. The strategy is not to replace the regime — it is to plug into the regime's dominant-design integration point so niche innovations scale at regime cadence. The SDM-correct move is to *ride* the transition, not fight it.
+
+### 13.14 Reframed primary thread — from paper to platform
+
+The SDM lens converts the §11.1(e) deliverable:
+
+- Before (§11.1(e) + §12.5 language): "reference integration architecture" = spec + paper + minimal reference impl.
+- After (§13 language): a **platform product** delivered as three layered artifacts:
+  1. **Specification layer** — ADRs, MVIP spec, FHIR IG extensions (DCA / Conformal / drift / model-version / fairness).
+  2. **Reference implementation layer** — HAPI stack, CDS Hooks service, SMART launch, HMCP manifest, Conformal wrapper, drift detector, RxNorm normalizer.
+  3. **Documentation layer** — model card (Mitchell 2018), datasheet (Gebru 2018), ADRs, RACI, QAS, TCO model, roadmap, CLD.
+
+Each layer has a matching SDM artifact: spec governed by ADRs + QAS; reference impl validated against QAS response-measures; documentation instantiates NIST AI RMF's Map + Govern functions. The platform framing makes *other research groups* the primary adopter — success is measured when a second MIMIC-derived legacy model wraps itself using the spec.
+
+### 13.15 SDM-style action list (supersedes §12.5)
+
+**Specification + governance (data-free)**:
+1. Write **ADR-001 … ADR-008** as markdown under `docs/adr/` (§13.5 content).
+2. Write the **MVIP (Minimum Viable Integration Profile) spec** covering (a) SMART launch context, (b) CDS Hooks service manifest + Card schema, (c) HMCP tool manifest, (d) `RiskAssessment` FHIR extensions (SHAP attribution, model version, training-data window, calibration strategy, uncertainty interval, fairness flag, drift flag, DCA net-benefit array).
+3. Write a **model card** for the LSTM-CNN and a **datasheet** for the MIMIC-III-derived features.
+4. Write the **QAS set** (§13.3) as `docs/qas.md` with explicit response-measures.
+5. Draw the **CLD** (§13.4) and publish as `docs/system-dynamics.md` with the explicit mapping of §12.5 + §13.15 actions → CLD leverage points.
+6. Instantiate **NIST AI RMF** mapping (§13.11) as `docs/ai-rmf.md`.
+
+**Reference implementation (code scaffold, data-free)**:
+7. FastAPI **CDS Hooks service stub** returning a dummy `RiskAssessment` with the full MVIP extension set.
+8. **Conformal Prediction wrapper** around the existing LSTM-CNN (ADR-002).
+9. **KS / Wasserstein drift detector stub** on the 76-dim observation vector (§12.5.7).
+10. **BC5CDR CHEMICAL → RxNorm normalizer** via NLM RxNav (ADR-007, §12.5.6).
+11. **SMART on FHIR launch bootstrap** + sample Epic App Launcher manifest.
+
+**Validation & pilot (semi-data-free via Synthea)**:
+12. **Synthea → FHIR → model-input adapter** bridging kind-lab MIMIC-IV profiles to this repo's MIMIC-III input contract (documents ADR-004 decision).
+13. **End-to-end demo**: Synthea sample patient → SMART launch → CDS Hooks invocation → model → Card → SHAP render.
+14. **Pre-register a stepped-wedge simulated-evaluation plan** on Synthea, patterned on ePNa AJRCCM + Implementation Science s13012-024-01386-4.
+
+**Parallel audit track**:
+15. Extend §10.4 GMLP audit to a **multi-jurisdictional score** (FDA GMLP + PCCP presence + CO SB24-205 + EU AI Act + calibration-strategy documented + drift-monitor present + model-card present) per §12.5.4.
+
+**Deferred (data-required)**:
+16. Warfarin × readmission simulation per §12.5.5 — §11.2(e) first instantiation.
+17. Adherence multi-head per §12.5.8.
+
+**Rejected / out of scope**:
+18. Drug repurposing, imaging CDS, genomics variant calling, population-health dashboards, billing/RCM CDS.
+
+### 13.16 Verification & source reliability notes
+
+| Claim | Source | Reliability |
+|:------|:-------|:------------|
+| Only 12 % of hospitals have formal AI governance framework | Censinet 2025 blog | Single-source; verify via CHAI / HIMSS survey before paper submission |
+| ~8 % of 2025 cleared AI devices use PCCP | medRxiv 2025.08.26.25334477 | Pre-print; wait for peer-reviewed |
+| 82 % / 74 % / 79 % predictive-AI hospital evaluation rates | AHA Market Scan 2025-11-04 | Industry survey; treat as directional |
+| $3.20 per $1 / 14-month ROI | Multiple industry reports | Vendor-marketing-adjacent; for academic use cite case studies (RPM 20–40 % readmission reduction) instead |
+| NAM *AI Code of Conduct* May 2025 | NAM primary source | Reliable |
+| CAOS-RE framework | Springer *Health Care Analysis* 10.1007/s10728-025-00537-y | Peer-reviewed |
+| McKinsey "modular architecture" | McKinsey 2025 industry report | Reliable framing; not peer-reviewed |
+| Epic U.S. acute-care market share 37.7–39.1 % | Multi-source (healthcarereimagined, SPsoft) | Triangulated, reliable |
+
+### 13.17 MIT SDM framing — artifact ↔ coursework map
+
+The artifacts above map onto SDM / ESD coursework:
+
+| Artifact in §13 | MIT SDM / ESD anchor |
+|:----------------|:---------------------|
+| OPM + system boundary (§13.1) | ESD.34 System Architecture (Crawley) |
+| SVN (§13.2) | Stakeholder Value Network analysis (Cameron / Rebentisch) |
+| QAS + ATAM (§13.3) | ATAM (Kazman, SEI) adopted in SDM system-architecture sequence |
+| CLD (§13.4) | 15.871 System Dynamics (Sterman), ESD.68 Modeling & Assessment |
+| ADRs (§13.5) | Architecture Decision Records (Nygard); paired with ESD.34 decision analysis |
+| DSM (§13.6) | ESD.36 Product Development (Eppinger) |
+| Real options (§13.7) | 16.888 Real Options in Engineering Systems (de Neufville) |
+| Dominant design / S-curve (§13.8) | Technology & Innovation (Utterback, Cusumano) |
+| RACI + team topology (§13.9) | Organizational design (Malone); Team Topologies (Skelton) |
+| Portfolio + roadmap (§13.10) | Technology Roadmapping (Phaal); engineering-management electives |
+| NIST AI RMF (§13.11) | Risk Management (MIT Sloan ESD.71) |
+| TCO + NPV (§13.12) | 15.401 Finance Theory; engineering-economics electives |
+| MLP (§13.13) | ESD.864 Technology Strategy (Geels / Schot sociotechnical transitions) |
+| Platform-vs-product reframing (§13.14) | Platform Strategy (Cusumano / Gawer) |
+
+The deliverable reads as an SDM thesis capstone artifact: an engineered system characterised by multi-framework analysis with a concrete management recommendation (§13.14) and a sequenced action plan (§13.15).
