@@ -53,10 +53,10 @@ src/
 ├── evaluation/    Classification metrics, result export
 └── visualization/ Training curves, ROC plots
 scripts/         Preprocess + 3 training variants
-notebooks/       SHAP explainability, NER analysis
-nlp/             BioWordVec loader
 tests/           Unit tests for core utilities
 ```
+
+Exploratory notebooks and patient-level outputs are excluded from version control.
 
 ---
 

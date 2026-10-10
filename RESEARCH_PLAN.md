@@ -2,6 +2,8 @@
 
 > Single working document for this research direction. Consolidates prior audit, notebook fix, literature review, and research plan into one self-contained file. Uncommitted working files (`IMPROVEMENT_PROMPT.md`, `MASTER_PLAN.md`, `INVESTIGATION_NER_PIPELINE.md`) have been removed.
 
+Notebook references below describe local exploratory analyses. The notebooks are excluded from version control.
+
 ---
 
 ## 1. Research goal

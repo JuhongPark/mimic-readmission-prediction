@@ -138,3 +138,12 @@ data/*.pk
 *.state
 keras_logs/
 outputs/
+
+# Local files
+/codes/PCA_LSTM_SHAP.ipynb
+/codes/SHAP_LSTM-CNN.ipynb
+/nlp/nlp-bc5cdr.ipynb
+/nlp/bio_word_vec.py
+/notebooks/nlp_bc5cdr_ner.ipynb
+/notebooks/shap_lstm_cnn.ipynb
+/notebooks/shap_pca_lstm.ipynb
